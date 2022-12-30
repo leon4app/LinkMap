@@ -8,8 +8,8 @@
 
 #import "ViewController.h"
 #import "SymbolModel.h"
-
-@interface ViewController()
+#import "DragView.h"
+@interface ViewController() <DragViewDelegate>
 
 @property (weak) IBOutlet NSTextField *filePathField;//显示选择的文件路径
 @property (weak) IBOutlet NSProgressIndicator *indicator;//指示器
@@ -18,10 +18,13 @@
 @property (weak) IBOutlet NSScrollView *contentView;//分析的内容
 @property (unsafe_unretained) IBOutlet NSTextView *contentTextView;
 @property (weak) IBOutlet NSButton *groupButton;
+@property (weak) IBOutlet DragView *dragView;
 
 
 @property (strong) NSURL *linkMapFileURL;
 @property (strong) NSString *linkMapContent;
+
+@property (copy) NSString *searchText;
 
 @property (strong) NSMutableString *result;//分析的结果
 
@@ -31,6 +34,9 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    [self.dragView registerForDraggedTypes:@[NSPasteboardTypeFileURL]];
+    self.dragView.delegate = self;
+
     self.indicator.hidden = YES;
     
     _contentTextView.editable = NO;
@@ -47,6 +53,12 @@
     7. * 勾选“分组解析”，然后点击“开始”。实现对不同库的目标文件进行分组";
 }
 
+- (void)didDragFileUrl:(NSString *)url {
+    NSURL *URL = [NSURL fileURLWithPath:url];
+    _filePathField.stringValue = URL.path;
+    self.linkMapFileURL = URL;
+}
+
 - (IBAction)chooseFile:(id)sender {
     NSOpenPanel *panel = [NSOpenPanel openPanel];
     panel.allowsMultipleSelection = NO;
@@ -56,7 +68,7 @@
     
     __weak typeof(self) weakSelf = self;
     [panel beginWithCompletionHandler:^(NSInteger result){
-        if (result == NSFileHandlingPanelOKButton) {
+        if (result == NSModalResponseOK) {
             NSURL *document = [[panel URLs] objectAtIndex:0];
             if (weakSelf == nil) return;
             __strong typeof(weakSelf) strongSelf = weakSelf;
@@ -71,7 +83,7 @@
         [self showAlertWithText:@"请选择正确的Link Map文件路径"];
         return;
     }
-    
+    self.searchText = _searchField.stringValue;
     __weak typeof(self) weakSelf = self;
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         if (weakSelf == nil) return;
@@ -142,6 +154,9 @@
                 reachSections = YES;
             else if ([line hasPrefix:@"# Symbols:"])
                 reachSymbols = YES;
+            else if ([line hasPrefix:@"# Dead Stripped Symbols:"]) {
+                break;
+            }
         } else {
             if(reachFiles == YES && reachSections == NO && reachSymbols == NO) {
                 NSRange range = [line rangeOfString:@"]"];
@@ -243,7 +258,7 @@
     
     NSArray *sortedSymbols = [self sortSymbols:combinationSymbols];
     
-    NSString *searchKey = _searchField.stringValue;
+    NSString *searchKey = self.searchText;
     
     for(SymbolModel *symbol in sortedSymbols) {
         if (searchKey.length > 0) {
@@ -269,7 +284,7 @@
     
     __weak typeof(self) weakSelf = self;
     [panel beginWithCompletionHandler:^(NSInteger result) {
-        if (result == NSFileHandlingPanelOKButton) {
+        if (result == NSModalResponseOK) {
             if (weakSelf == nil) return;
             __strong typeof(weakSelf) strongSelf = weakSelf;
             NSURL*  theDoc = [[panel URLs] objectAtIndex:0];

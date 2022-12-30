@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		35351B88295ED15500E33F42 /* DragView.m in Sources */ = {isa = PBXBuildFile; fileRef = 35351B87295ED15500E33F42 /* DragView.m */; };
 		6E7367EA1CB7843200722B99 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 6E7367E91CB7843200722B99 /* AppDelegate.m */; };
 		6E7367ED1CB7843200722B99 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 6E7367EC1CB7843200722B99 /* main.m */; };
 		6E7367F01CB7843200722B99 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6E7367EF1CB7843200722B99 /* ViewController.m */; };
@@ -16,6 +17,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		35351B86295ED15500E33F42 /* DragView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DragView.h; sourceTree = "<group>"; };
+		35351B87295ED15500E33F42 /* DragView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DragView.m; sourceTree = "<group>"; };
 		6E7367E51CB7843200722B99 /* LinkMap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LinkMap.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6E7367E81CB7843200722B99 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		6E7367E91CB7843200722B99 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
@@ -64,6 +67,8 @@
 				6E7367EE1CB7843200722B99 /* ViewController.h */,
 				6E7367EF1CB7843200722B99 /* ViewController.m */,
 				6E73680A1CB784F100722B99 /* SymbolModel.h */,
+				35351B86295ED15500E33F42 /* DragView.h */,
+				35351B87295ED15500E33F42 /* DragView.m */,
 				6E73680B1CB784F100722B99 /* SymbolModel.m */,
 				6E7367F11CB7843200722B99 /* Assets.xcassets */,
 				6E7367F31CB7843200722B99 /* Main.storyboard */,
@@ -154,6 +159,7 @@
 				6E7367ED1CB7843200722B99 /* main.m in Sources */,
 				6E7367EA1CB7843200722B99 /* AppDelegate.m in Sources */,
 				6E73680C1CB784F100722B99 /* SymbolModel.m in Sources */,
+				35351B88295ED15500E33F42 /* DragView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -291,7 +297,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nd.LinkMap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -308,7 +314,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nd.LinkMap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
