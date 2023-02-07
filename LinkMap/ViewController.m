@@ -26,7 +26,7 @@
 
 @property (copy) NSString *searchText;
 
-@property (strong) NSMutableString *result;//分析的结果
+@property (strong) NSMutableAttributedString *result;//分析的结果
 
 @end
 
@@ -129,7 +129,8 @@
         dispatch_async(dispatch_get_main_queue(), ^{
             if (weakSelf == nil) return;
             __strong typeof(weakSelf) strongSelf = weakSelf;
-            strongSelf.contentTextView.string = strongSelf->_result;
+            strongSelf.contentTextView.string = @"";
+            [[strongSelf.contentTextView textStorage] appendAttributedString:strongSelf.result];
             strongSelf.indicator.hidden = YES;
             [strongSelf.indicator stopAnimation:self];
             
@@ -202,7 +203,7 @@
 }
 
 - (void)buildResultWithSymbols:(NSArray *)symbols {
-    self.result = [@"文件大小\t文件名称\r\n\r\n" mutableCopy];
+    self.result = [[NSMutableAttributedString alloc] initWithString:@"库大小\t库名称\r\n\r\n"];
     NSUInteger totalSize = 0;
     
     __block NSString *searchKey;
@@ -214,21 +215,32 @@
     for(SymbolModel *symbol in symbols) {
         if (searchKey.length > 0) {
             if ([symbol.file containsString:searchKey]) {
-                [self appendResultWithSymbol:symbol];
+                [self appendResultWithSymbol:symbol ignore:NO];
                 totalSize += symbol.size;
             }
         } else {
-            [self appendResultWithSymbol:symbol];
-            totalSize += symbol.size;
+            if ([symbol.file hasSuffix:@".o"]) {
+                [self appendResultWithSymbol:symbol ignore:YES];
+            } else if ([symbol.file hasSuffix:@".a"]) {
+                [self appendResultWithSymbol:symbol ignore:YES];
+            } else if ([symbol.file hasSuffix:@".tbd"]) {
+                [self appendResultWithSymbol:symbol ignore:YES];
+            } else if ([symbol.file isEqual:@" linker synthesized"]) {
+                [self appendResultWithSymbol:symbol ignore:YES];
+            } else {
+                [self appendResultWithSymbol:symbol ignore:NO];
+                totalSize += symbol.size;
+            }
         }
     }
-    
-    [_result appendFormat:@"\r\n总大小: %.2fM\r\n",(totalSize/1024.0/1024.0)];
+
+    NSString *text = [[NSString alloc] initWithFormat:@"\r\n总大小: %.2fM(%.2fK)(不包括忽略部分)\r\n",(totalSize/1024.0/1024.0), (totalSize/1024.0)];
+    [_result appendAttributedString:[[NSAttributedString alloc] initWithString:text]];
 }
 
 
 - (void)buildCombinationResultWithSymbols:(NSArray *)symbols {
-    self.result = [@"库大小\t库名称\r\n\r\n" mutableCopy];
+    self.result = [[NSMutableAttributedString alloc] initWithString:@"库大小\t库名称\r\n\r\n"];
     NSUInteger totalSize = 0;
     
     NSMutableDictionary *combinationMap = [[NSMutableDictionary alloc] init];
@@ -259,36 +271,36 @@
     NSArray *sortedSymbols = [self sortSymbols:combinationSymbols];
     
     NSString *searchKey = self.searchText;
-    
-    NSPredicate *predicate = [NSPredicate predicateWithFormat:@"NOT (%K ENDSWITH[c] '.o')", @"file"];
-    sortedSymbols = [sortedSymbols filteredArrayUsingPredicate:predicate];
-
-    predicate = [NSPredicate predicateWithFormat:@"NOT (%K ENDSWITH[c] '.tbd')", @"file"];
-    sortedSymbols = [sortedSymbols filteredArrayUsingPredicate:predicate];
-
-    predicate = [NSPredicate predicateWithFormat:@"NOT (%K ENDSWITH[c] '.a')", @"file"];
-    sortedSymbols = [sortedSymbols filteredArrayUsingPredicate:predicate];
-
-    predicate = [NSPredicate predicateWithFormat:@"NOT (%K MATCHES[c] ' linker synthesized')", @"file"];
-    sortedSymbols = [sortedSymbols filteredArrayUsingPredicate:predicate];
 
     for(SymbolModel *symbol in sortedSymbols) {
         if (searchKey.length > 0) {
             if ([symbol.file containsString:searchKey]) {
-                [self appendResultWithSymbol:symbol];
+                [self appendResultWithSymbol:symbol ignore:NO];
                 totalSize += symbol.size;
             }
         } else {
-            [self appendResultWithSymbol:symbol];
-            totalSize += symbol.size;
+            if ([symbol.file hasSuffix:@".o"]) {
+                [self appendResultWithSymbol:symbol ignore:YES];
+            } else if ([symbol.file hasSuffix:@".a"]) {
+                [self appendResultWithSymbol:symbol ignore:YES];
+            } else if ([symbol.file hasSuffix:@".tbd"]) {
+                [self appendResultWithSymbol:symbol ignore:YES];
+            } else if ([symbol.file isEqual:@" linker synthesized"]) {
+                [self appendResultWithSymbol:symbol ignore:YES];
+            } else {
+                [self appendResultWithSymbol:symbol ignore:NO];
+                totalSize += symbol.size;
+            }
         }
     }
-    
-    [_result appendFormat:@"\r\n总大小: %.2fM\r\n",(totalSize/1024.0/1024.0)];
+
+    NSString *text = [[NSString alloc] initWithFormat:@"\r\n总大小: %.2fM(%.2fK)(不包括忽略部分)\r\n",(totalSize/1024.0/1024.0), (totalSize/1024.0)];
+    [_result appendAttributedString:[[NSAttributedString alloc] initWithString:text]];
 }
 
 - (IBAction)ouputFile:(id)sender {
     NSOpenPanel* panel = [NSOpenPanel openPanel];
+    [panel setPrompt:@"OK"];
     [panel setAllowsMultipleSelection:NO];
     [panel setCanChooseDirectories:YES];
     [panel setResolvesAliases:NO];
@@ -297,25 +309,37 @@
     __weak typeof(self) weakSelf = self;
     [panel beginWithCompletionHandler:^(NSInteger result) {
         if (result == NSModalResponseOK) {
-            if (weakSelf == nil) return;
+            if (weakSelf == nil)
+                return;
             __strong typeof(weakSelf) strongSelf = weakSelf;
-            NSURL*  theDoc = [[panel URLs] objectAtIndex:0];
-            NSMutableString *content =[[NSMutableString alloc]initWithCapacity:0];
-            [content appendString:[theDoc path]];
-            [content appendString:@"/linkMap.txt"];
-            [strongSelf->_result writeToFile:content atomically:YES encoding:NSUTF8StringEncoding error:nil];
+            NSURL *dirPath = [[panel URLs] objectAtIndex:0];
+            NSString *filePath = [NSString stringWithFormat:@"%@/linkMap.rtf", dirPath.path];
+            NSData *data = [strongSelf.result dataFromRange:NSMakeRange(0, strongSelf.result.length)
+                                         documentAttributes:@{
+                                             NSDocumentTypeDocumentAttribute: NSRTFTextDocumentType,
+                                             NSCharacterEncodingDocumentAttribute: @(NSUTF8StringEncoding)
+                                         }
+                                                      error:nil];
+            [data writeToFile:filePath atomically:YES];
         }
     }];
 }
 
-- (void)appendResultWithSymbol:(SymbolModel *)model {
+- (void)appendResultWithSymbol:(SymbolModel *)model ignore:(BOOL)ignore {
     NSString *size = nil;
     if (model.size / 1024.0 / 1024.0 > 1) {
         size = [NSString stringWithFormat:@"%.2fM", model.size / 1024.0 / 1024.0];
     } else {
         size = [NSString stringWithFormat:@"%.2fK", model.size / 1024.0];
     }
-    [_result appendFormat:@"%@\t%@\r\n",size, [[model.file componentsSeparatedByString:@"/"] lastObject]];
+    // TODO: 灰字
+//    [_result appendFormat:@"%@\t%@\r\n",size, [[model.file componentsSeparatedByString:@"/"] lastObject]];
+    NSString *text = [[NSString alloc] initWithFormat:@"%@\t%@\r\n",size, [[model.file componentsSeparatedByString:@"/"] lastObject]];
+    if (ignore) {
+        [_result appendAttributedString:[[NSAttributedString alloc] initWithString:text attributes:@{NSForegroundColorAttributeName: NSColor.lightGrayColor}]];
+    } else {
+        [_result appendAttributedString:[[NSAttributedString alloc] initWithString:text]];
+    }
 }
 
 - (BOOL)checkContent:(NSString *)content {
