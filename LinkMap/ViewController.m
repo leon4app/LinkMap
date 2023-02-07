@@ -28,6 +28,11 @@
 
 @property (strong) NSMutableAttributedString *result;//分析的结果
 
+@property (weak) IBOutlet NSButton *aCheckButton;
+@property (weak) IBOutlet NSButton *oCheckButton;
+@property (weak) IBOutlet NSButton *tbdCheckButton;
+@property (weak) IBOutlet NSButton *linkerSynCheckButton;
+
 @end
 
 @implementation ViewController
@@ -206,12 +211,18 @@
     self.result = [[NSMutableAttributedString alloc] initWithString:@"库大小\t库名称\r\n\r\n"];
     NSUInteger totalSize = 0;
     
-    __block NSString *searchKey;
+    NSString *searchKey = self.searchText;
+    __block BOOL ignoreA;
+    __block BOOL ignoreO;
+    __block BOOL ignoreTbd;
+    __block BOOL ignorelinkerSyn;
     dispatch_sync(dispatch_get_main_queue(), ^{
-        searchKey = _searchField.stringValue;
+        ignoreA = self.aCheckButton.state == NSControlStateValueOn;
+        ignoreO = self.oCheckButton.state == NSControlStateValueOn;
+        ignoreTbd = self.tbdCheckButton.state == NSControlStateValueOn;
+        ignorelinkerSyn = self.linkerSynCheckButton.state == NSControlStateValueOn;
     });
 
-    
     for(SymbolModel *symbol in symbols) {
         if (searchKey.length > 0) {
             if ([symbol.file containsString:searchKey]) {
@@ -219,13 +230,10 @@
                 totalSize += symbol.size;
             }
         } else {
-            if ([symbol.file hasSuffix:@".o"]) {
-                [self appendResultWithSymbol:symbol ignore:YES];
-            } else if ([symbol.file hasSuffix:@".a"]) {
-                [self appendResultWithSymbol:symbol ignore:YES];
-            } else if ([symbol.file hasSuffix:@".tbd"]) {
-                [self appendResultWithSymbol:symbol ignore:YES];
-            } else if ([symbol.file isEqual:@" linker synthesized"]) {
+            if ((ignoreA && [symbol.file hasSuffix:@".a"])
+                || (ignoreO && [symbol.file hasSuffix:@".o"])
+                || (ignoreTbd == NSControlStateValueOn && [symbol.file hasSuffix:@".tbd"])
+                || (ignorelinkerSyn == NSControlStateValueOn && [symbol.file isEqual:@" linker synthesized"]) ) {
                 [self appendResultWithSymbol:symbol ignore:YES];
             } else {
                 [self appendResultWithSymbol:symbol ignore:NO];
@@ -271,6 +279,16 @@
     NSArray *sortedSymbols = [self sortSymbols:combinationSymbols];
     
     NSString *searchKey = self.searchText;
+    __block BOOL ignoreA;
+    __block BOOL ignoreO;
+    __block BOOL ignoreTbd;
+    __block BOOL ignorelinkerSyn;
+    dispatch_sync(dispatch_get_main_queue(), ^{
+        ignoreA = self.aCheckButton.state == NSControlStateValueOn;
+        ignoreO = self.oCheckButton.state == NSControlStateValueOn;
+        ignoreTbd = self.tbdCheckButton.state == NSControlStateValueOn;
+        ignorelinkerSyn = self.linkerSynCheckButton.state == NSControlStateValueOn;
+    });
 
     for(SymbolModel *symbol in sortedSymbols) {
         if (searchKey.length > 0) {
@@ -279,13 +297,10 @@
                 totalSize += symbol.size;
             }
         } else {
-            if ([symbol.file hasSuffix:@".o"]) {
-                [self appendResultWithSymbol:symbol ignore:YES];
-            } else if ([symbol.file hasSuffix:@".a"]) {
-                [self appendResultWithSymbol:symbol ignore:YES];
-            } else if ([symbol.file hasSuffix:@".tbd"]) {
-                [self appendResultWithSymbol:symbol ignore:YES];
-            } else if ([symbol.file isEqual:@" linker synthesized"]) {
+            if ((ignoreA && [symbol.file hasSuffix:@".a"])
+                || (ignoreO && [symbol.file hasSuffix:@".o"])
+                || (ignoreTbd == NSControlStateValueOn && [symbol.file hasSuffix:@".tbd"])
+                || (ignorelinkerSyn == NSControlStateValueOn && [symbol.file isEqual:@" linker synthesized"]) ) {
                 [self appendResultWithSymbol:symbol ignore:YES];
             } else {
                 [self appendResultWithSymbol:symbol ignore:NO];
@@ -332,8 +347,6 @@
     } else {
         size = [NSString stringWithFormat:@"%.2fK", model.size / 1024.0];
     }
-    // TODO: 灰字
-//    [_result appendFormat:@"%@\t%@\r\n",size, [[model.file componentsSeparatedByString:@"/"] lastObject]];
     NSString *text = [[NSString alloc] initWithFormat:@"%@\t%@\r\n",size, [[model.file componentsSeparatedByString:@"/"] lastObject]];
     if (ignore) {
         [_result appendAttributedString:[[NSAttributedString alloc] initWithString:text attributes:@{NSForegroundColorAttributeName: NSColor.lightGrayColor}]];
