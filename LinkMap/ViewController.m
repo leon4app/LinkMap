@@ -260,6 +260,18 @@
     
     NSString *searchKey = self.searchText;
     
+    NSPredicate *predicate = [NSPredicate predicateWithFormat:@"NOT (%K ENDSWITH[c] '.o')", @"file"];
+    sortedSymbols = [sortedSymbols filteredArrayUsingPredicate:predicate];
+
+    predicate = [NSPredicate predicateWithFormat:@"NOT (%K ENDSWITH[c] '.tbd')", @"file"];
+    sortedSymbols = [sortedSymbols filteredArrayUsingPredicate:predicate];
+
+    predicate = [NSPredicate predicateWithFormat:@"NOT (%K ENDSWITH[c] '.a')", @"file"];
+    sortedSymbols = [sortedSymbols filteredArrayUsingPredicate:predicate];
+
+    predicate = [NSPredicate predicateWithFormat:@"NOT (%K MATCHES[c] ' linker synthesized')", @"file"];
+    sortedSymbols = [sortedSymbols filteredArrayUsingPredicate:predicate];
+
     for(SymbolModel *symbol in sortedSymbols) {
         if (searchKey.length > 0) {
             if ([symbol.file containsString:searchKey]) {
