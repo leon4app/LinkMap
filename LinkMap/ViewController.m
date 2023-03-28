@@ -45,6 +45,7 @@
     self.indicator.hidden = YES;
     
     _contentTextView.editable = NO;
+    _contentTextView.selectable = YES;
     
     _contentTextView.string = @"使用方式：\n\
     1.在XCode中开启编译选项Write Link Map File \n\
