@@ -209,7 +209,7 @@
 }
 
 - (void)buildResultWithSymbols:(NSArray *)symbols {
-    self.result = [[NSMutableAttributedString alloc] initWithString:@"库大小\t库名称\r\n\r\n"];
+    self.result = [[NSMutableAttributedString alloc] initWithString:@"库大小\t\t库名称\r\n\r\n"];
     NSUInteger totalSize = 0;
     
     NSString *searchKey = self.searchText;
@@ -243,13 +243,13 @@
         }
     }
 
-    NSString *text = [[NSString alloc] initWithFormat:@"\r\n总大小: %.2fM(%.2fK)(不包括忽略部分)\r\n",(totalSize/1024.0/1024.0), (totalSize/1024.0)];
+    NSString *text = [[NSString alloc] initWithFormat:@"\r\n总大小: %.2fMiB(%.2fKiB)\r\n1000进制统计口径: %.2fMB(%.2fKB)\r\n(不包括忽略部分)\r\n",(totalSize/1024.0/1024.0), (totalSize/1024.0), totalSize/1000.0/1000.0, totalSize/1000.0];
     [_result appendAttributedString:[[NSAttributedString alloc] initWithString:text]];
 }
 
 
 - (void)buildCombinationResultWithSymbols:(NSArray *)symbols {
-    self.result = [[NSMutableAttributedString alloc] initWithString:@"库大小\t库名称\r\n\r\n"];
+    self.result = [[NSMutableAttributedString alloc] initWithString:@"库大小\t\t库名称\r\n\r\n"];
     NSUInteger totalSize = 0;
     
     NSMutableDictionary *combinationMap = [[NSMutableDictionary alloc] init];
@@ -310,7 +310,7 @@
         }
     }
 
-    NSString *text = [[NSString alloc] initWithFormat:@"\r\n总大小: %.2fM(%.2fK)(不包括忽略部分)\r\n",(totalSize/1024.0/1024.0), (totalSize/1024.0)];
+    NSString *text = [[NSString alloc] initWithFormat:@"\r\n总大小: %.2fMiB(%.2fKiB)\r\n1000进制统计口径: %.2fMB(%.2fKB)\r\n(不包括忽略部分)\r\n",(totalSize/1024.0/1024.0), (totalSize/1024.0), totalSize/1000.0/1000.0, totalSize/1000.0];
     [_result appendAttributedString:[[NSAttributedString alloc] initWithString:text]];
 }
 
@@ -344,11 +344,11 @@
 - (void)appendResultWithSymbol:(SymbolModel *)model ignore:(BOOL)ignore {
     NSString *size = nil;
     if (model.size / 1024.0 / 1024.0 > 1) {
-        size = [NSString stringWithFormat:@"%.2fM", model.size / 1024.0 / 1024.0];
+        size = [NSString stringWithFormat:@"%.2fMiB", model.size / 1024.0 / 1024.0];
     } else {
-        size = [NSString stringWithFormat:@"%.2fK", model.size / 1024.0];
+        size = [NSString stringWithFormat:@"%.2fKiB", model.size / 1024.0];
     }
-    NSString *text = [[NSString alloc] initWithFormat:@"%@\t%@\r\n",size, [[model.file componentsSeparatedByString:@"/"] lastObject]];
+    NSString *text = [[NSString alloc] initWithFormat:@"%@\t\t%@\r\n",size, [[model.file componentsSeparatedByString:@"/"] lastObject]];
     if (ignore) {
         [_result appendAttributedString:[[NSAttributedString alloc] initWithString:text attributes:@{NSForegroundColorAttributeName: NSColor.lightGrayColor}]];
     } else {
