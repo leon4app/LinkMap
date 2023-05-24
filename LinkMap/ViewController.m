@@ -15,8 +15,7 @@
 @property (weak) IBOutlet NSProgressIndicator *indicator;//指示器
 @property (weak) IBOutlet NSTextField *searchField;
 
-@property (weak) IBOutlet NSScrollView *contentView;//分析的内容
-@property (unsafe_unretained) IBOutlet NSTextView *contentTextView;
+@property (weak) IBOutlet NSTextView *contentTextView;
 @property (weak) IBOutlet NSButton *groupButton;
 @property (weak) IBOutlet DragView *dragView;
 

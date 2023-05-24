@@ -15,7 +15,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
-@interface DragView : NSView
+@interface DragView : NSScrollView
 @property (nonatomic, weak) id<DragViewDelegate> delegate;
 @end
 
