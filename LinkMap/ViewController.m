@@ -30,6 +30,8 @@
 @property (weak) IBOutlet NSButton *aCheckButton;
 @property (weak) IBOutlet NSButton *oCheckButton;
 @property (weak) IBOutlet NSButton *tbdCheckButton;
+@property (weak) IBOutlet NSButton *dylibCheckButton;
+
 @property (weak) IBOutlet NSButton *linkerSynCheckButton;
 
 @end
@@ -209,38 +211,8 @@
 
 - (void)buildResultWithSymbols:(NSArray *)symbols {
     self.result = [[NSMutableAttributedString alloc] initWithString:@"库大小\t\t库名称\r\n\r\n"];
-    NSUInteger totalSize = 0;
-    
-    NSString *searchKey = self.searchText;
-    __block BOOL ignoreA;
-    __block BOOL ignoreO;
-    __block BOOL ignoreTbd;
-    __block BOOL ignorelinkerSyn;
-    dispatch_sync(dispatch_get_main_queue(), ^{
-        ignoreA = self.aCheckButton.state == NSControlStateValueOn;
-        ignoreO = self.oCheckButton.state == NSControlStateValueOn;
-        ignoreTbd = self.tbdCheckButton.state == NSControlStateValueOn;
-        ignorelinkerSyn = self.linkerSynCheckButton.state == NSControlStateValueOn;
-    });
 
-    for(SymbolModel *symbol in symbols) {
-        if (searchKey.length > 0) {
-            if ([symbol.file containsString:searchKey]) {
-                [self appendResultWithSymbol:symbol ignore:NO];
-                totalSize += symbol.size;
-            }
-        } else {
-            if ((ignoreA && [symbol.file hasSuffix:@".a"])
-                || (ignoreO && [symbol.file hasSuffix:@".o"])
-                || (ignoreTbd == NSControlStateValueOn && [symbol.file hasSuffix:@".tbd"])
-                || (ignorelinkerSyn == NSControlStateValueOn && [symbol.file isEqual:@" linker synthesized"]) ) {
-                [self appendResultWithSymbol:symbol ignore:YES];
-            } else {
-                [self appendResultWithSymbol:symbol ignore:NO];
-                totalSize += symbol.size;
-            }
-        }
-    }
+    NSUInteger totalSize = [self analyze:symbols withSearchKey:self.searchText];
 
     NSString *text = [[NSString alloc] initWithFormat:@"\r\n总大小: %.2fMiB(%.2fKiB)\r\n1000进制统计口径: %.2fMB(%.2fKB)\r\n(不包括忽略部分)\r\n",(totalSize/1024.0/1024.0), (totalSize/1024.0), totalSize/1000.0/1000.0, totalSize/1000.0];
     [_result appendAttributedString:[[NSAttributedString alloc] initWithString:text]];
@@ -249,7 +221,6 @@
 
 - (void)buildCombinationResultWithSymbols:(NSArray *)symbols {
     self.result = [[NSMutableAttributedString alloc] initWithString:@"库大小\t\t库名称\r\n\r\n"];
-    NSUInteger totalSize = 0;
     
     NSMutableDictionary *combinationMap = [[NSMutableDictionary alloc] init];
     
@@ -259,7 +230,11 @@
             [name containsString:@"("]) {
             NSRange range = [name rangeOfString:@"("];
             NSString *component = [name substringToIndex:range.location];
-            
+            if ([component hasSuffix:@"]"] &&
+                [component containsString:@"["]) {
+                range = [component rangeOfString:@"["];
+                component = [component substringToIndex:range.location];
+            }
             SymbolModel *combinationSymbol = [combinationMap objectForKey:component];
             if (!combinationSymbol) {
                 combinationSymbol = [[SymbolModel alloc] init];
@@ -277,20 +252,29 @@
     NSArray <SymbolModel *>*combinationSymbols = [combinationMap allValues];
     
     NSArray *sortedSymbols = [self sortSymbols:combinationSymbols];
-    
-    NSString *searchKey = self.searchText;
+
+    NSUInteger totalSize = [self analyze:sortedSymbols withSearchKey:self.searchText];
+
+    NSString *text = [[NSString alloc] initWithFormat:@"\r\n总大小: %.2fMiB(%.2fKiB)\r\n1000进制统计口径: %.2fMB(%.2fKB)\r\n(不包括忽略部分)\r\n",(totalSize/1024.0/1024.0), (totalSize/1024.0), totalSize/1000.0/1000.0, totalSize/1000.0];
+    [_result appendAttributedString:[[NSAttributedString alloc] initWithString:text]];
+}
+
+- (NSUInteger)analyze:(NSArray<SymbolModel *> *)symbols withSearchKey:(NSString *)searchKey {
+    NSUInteger totalSize = 0;
     __block BOOL ignoreA;
     __block BOOL ignoreO;
     __block BOOL ignoreTbd;
+    __block BOOL ignoreDylib;
     __block BOOL ignorelinkerSyn;
     dispatch_sync(dispatch_get_main_queue(), ^{
         ignoreA = self.aCheckButton.state == NSControlStateValueOn;
         ignoreO = self.oCheckButton.state == NSControlStateValueOn;
         ignoreTbd = self.tbdCheckButton.state == NSControlStateValueOn;
+        ignoreDylib = self.dylibCheckButton.state == NSControlStateValueOn;
         ignorelinkerSyn = self.linkerSynCheckButton.state == NSControlStateValueOn;
     });
 
-    for(SymbolModel *symbol in sortedSymbols) {
+    for(SymbolModel *symbol in symbols) {
         if (searchKey.length > 0) {
             if ([symbol.file containsString:searchKey]) {
                 [self appendResultWithSymbol:symbol ignore:NO];
@@ -299,8 +283,10 @@
         } else {
             if ((ignoreA && [symbol.file hasSuffix:@".a"])
                 || (ignoreO && [symbol.file hasSuffix:@".o"])
-                || (ignoreTbd == NSControlStateValueOn && [symbol.file hasSuffix:@".tbd"])
-                || (ignorelinkerSyn == NSControlStateValueOn && [symbol.file isEqual:@" linker synthesized"]) ) {
+                || (ignoreTbd && [symbol.file hasSuffix:@".tbd"])
+                || (ignoreDylib && [symbol.file hasSuffix:@".dylib"])
+                || (ignorelinkerSyn && [symbol.file hasPrefix:@" "]) ) {
+                // 系统库如AVFCapture虽然显示是AVFCapture, 但是捕获到的名字是" /System/Library/PrivateFrameworks/AVFCapture.framework/AVFCapture", 所以会命中空格规则
                 [self appendResultWithSymbol:symbol ignore:YES];
             } else {
                 [self appendResultWithSymbol:symbol ignore:NO];
@@ -308,9 +294,7 @@
             }
         }
     }
-
-    NSString *text = [[NSString alloc] initWithFormat:@"\r\n总大小: %.2fMiB(%.2fKiB)\r\n1000进制统计口径: %.2fMB(%.2fKB)\r\n(不包括忽略部分)\r\n",(totalSize/1024.0/1024.0), (totalSize/1024.0), totalSize/1000.0/1000.0, totalSize/1000.0];
-    [_result appendAttributedString:[[NSAttributedString alloc] initWithString:text]];
+    return totalSize;
 }
 
 - (IBAction)ouputFile:(id)sender {
