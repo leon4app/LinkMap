@@ -32,7 +32,7 @@
 @property (weak) IBOutlet NSButton *tbdCheckButton;
 @property (weak) IBOutlet NSButton *dylibCheckButton;
 
-@property (weak) IBOutlet NSButton *linkerSynCheckButton;
+@property (weak) IBOutlet NSButton *spacePrefixCheckButton;
 
 @end
 
@@ -58,6 +58,9 @@
     5.点击“输出文件”，得到解析后的Link Map文件 \n\
     6. * 输入目标文件的关键字(例如：libIM)，然后点击“开始”。实现搜索功能 \n\
     7. * 勾选“分组解析”，然后点击“开始”。实现对不同库的目标文件进行分组";
+
+    // 设置悬停文案
+    [self.spacePrefixCheckButton setToolTip:@"比如` linker synthesized`或者` objc-stubs-file`\n系统库如AVFCapture虽然显示是AVFCapture, 但是捕获到的名字是` /System/Library/PrivateFrameworks/AVFCapture.framework/AVFCapture`, 所以会命中空格规则"];
 }
 
 - (void)didDragFileUrl:(NSString *)url {
@@ -271,7 +274,7 @@
         ignoreO = self.oCheckButton.state == NSControlStateValueOn;
         ignoreTbd = self.tbdCheckButton.state == NSControlStateValueOn;
         ignoreDylib = self.dylibCheckButton.state == NSControlStateValueOn;
-        ignorelinkerSyn = self.linkerSynCheckButton.state == NSControlStateValueOn;
+        ignorelinkerSyn = self.spacePrefixCheckButton.state == NSControlStateValueOn;
     });
 
     for(SymbolModel *symbol in symbols) {

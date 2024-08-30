@@ -861,9 +861,9 @@
                         <outlet property="filePathField" destination="X8W-zP-y0k" id="hGg-O0-t1y"/>
                         <outlet property="groupButton" destination="jz7-uS-xpD" id="nK4-ZM-mU8"/>
                         <outlet property="indicator" destination="VoU-Xv-rpc" id="2Qo-ph-PHj"/>
-                        <outlet property="linkerSynCheckButton" destination="Dt6-c9-FRe" id="698-j2-jKs"/>
                         <outlet property="oCheckButton" destination="lQE-IG-DNI" id="kXb-4q-VmI"/>
                         <outlet property="searchField" destination="xh9-IL-MDL" id="auu-IH-1sH"/>
+                        <outlet property="spacePrefixCheckButton" destination="Dt6-c9-FRe" id="698-j2-jKs"/>
                         <outlet property="tbdCheckButton" destination="k2V-nl-zH1" id="jOy-ro-gQn"/>
                     </connections>
                 </viewController>
