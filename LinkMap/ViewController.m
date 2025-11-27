@@ -99,6 +99,7 @@
         if (weakSelf == nil) return;
         __strong typeof(weakSelf) strongSelf = weakSelf;
         NSString *content = [NSString stringWithContentsOfURL:strongSelf->_linkMapFileURL encoding:NSMacOSRomanStringEncoding error:nil];
+        strongSelf.linkMapContent = content;
         
         if (![strongSelf checkContent:content]) {
             dispatch_async(dispatch_get_main_queue(), ^{
@@ -181,7 +182,13 @@
                 NSArray <NSString *>*symbolsArray = [line componentsSeparatedByString:@"\t"];
                 if(symbolsArray.count == 3) {
                     NSString *fileKeyAndName = symbolsArray[2];
-                    NSUInteger size = strtoul([symbolsArray[1] UTF8String], nil, 16);
+                    NSString *sizeStr = symbolsArray[1];
+                    NSUInteger size = 0;
+                    if ([sizeStr hasPrefix:@"0x"] || [sizeStr hasPrefix:@"0X"]) {
+                        size = (NSUInteger)strtoull([sizeStr UTF8String], nil, 16);
+                    } else {
+                        size = (NSUInteger)strtoull([sizeStr UTF8String], nil, 10);
+                    }
                     
                     NSRange range = [fileKeyAndName rangeOfString:@"]"];
                     if(range.location != NSNotFound) {
@@ -215,7 +222,14 @@
 - (void)buildResultWithSymbols:(NSArray *)symbols {
     self.result = [[NSMutableAttributedString alloc] initWithString:@"库大小\t\t库名称\r\n\r\n"];
 
-    NSUInteger totalSize = [self analyze:symbols withSearchKey:self.searchText];
+    NSArray *augmented = symbols;
+    NSString *binaryPath = [self appBinaryPathFromContent:self.linkMapContent];
+    NSArray *extra = [self extraSymbolsFromAppBinaryPath:binaryPath];
+    if (extra.count > 0) {
+        augmented = [augmented arrayByAddingObjectsFromArray:extra];
+    }
+
+    NSUInteger totalSize = [self analyze:augmented withSearchKey:self.searchText];
 
     NSString *text = [[NSString alloc] initWithFormat:@"\r\n总大小: %.2fMiB(%.2fKiB)\r\n1000进制统计口径: %.2fMB(%.2fKB)\r\n(不包括忽略部分)\r\n",(totalSize/1024.0/1024.0), (totalSize/1024.0), totalSize/1000.0/1000.0, totalSize/1000.0];
     [_result appendAttributedString:[[NSAttributedString alloc] initWithString:text]];
@@ -256,10 +270,99 @@
     
     NSArray *sortedSymbols = [self sortSymbols:combinationSymbols];
 
+    NSString *binaryPath = [self appBinaryPathFromContent:self.linkMapContent];
+    NSArray *extra = [self extraSymbolsFromAppBinaryPath:binaryPath];
+    if (extra.count > 0) {
+        sortedSymbols = [self sortSymbols:[sortedSymbols arrayByAddingObjectsFromArray:extra]];
+    }
+
     NSUInteger totalSize = [self analyze:sortedSymbols withSearchKey:self.searchText];
 
     NSString *text = [[NSString alloc] initWithFormat:@"\r\n总大小: %.2fMiB(%.2fKiB)\r\n1000进制统计口径: %.2fMB(%.2fKB)\r\n(不包括忽略部分)\r\n",(totalSize/1024.0/1024.0), (totalSize/1024.0), totalSize/1000.0/1000.0, totalSize/1000.0];
     [_result appendAttributedString:[[NSAttributedString alloc] initWithString:text]];
+}
+
+- (NSString *)appBinaryPathFromContent:(NSString *)content {
+    if (content.length == 0) return nil;
+    NSRange pathTagRange = [content rangeOfString:@"# Path:"];
+    if (pathTagRange.location == NSNotFound) return nil;
+    NSString *sub = [content substringFromIndex:pathTagRange.location + pathTagRange.length];
+    NSRange newline = [sub rangeOfString:@"\n"];
+    NSString *path = newline.location == NSNotFound ? sub : [sub substringToIndex:newline.location];
+    return [path stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+}
+
+- (NSArray<SymbolModel *> *)extraSymbolsFromAppBinaryPath:(NSString *)binaryPath {
+    if (binaryPath.length == 0) return @[];
+    NSString *appDir = [binaryPath stringByDeletingLastPathComponent];
+    NSFileManager *fm = [NSFileManager defaultManager];
+    NSMutableArray<SymbolModel *> *arr = [NSMutableArray array];
+
+    NSString *frameworksDir = [appDir stringByAppendingPathComponent:@"Frameworks"];
+    BOOL isDir = NO;
+    if ([fm fileExistsAtPath:frameworksDir isDirectory:&isDir] && isDir) {
+        NSArray *items = [fm contentsOfDirectoryAtPath:frameworksDir error:nil];
+        for (NSString *item in items) {
+            NSString *full = [frameworksDir stringByAppendingPathComponent:item];
+            if ([item hasSuffix:@".framework"]) {
+                NSString *binName = [item stringByDeletingPathExtension];
+                NSString *binPath = [full stringByAppendingPathComponent:binName];
+                unsigned long long size = [self fileSizeAtPath:binPath];
+                if (size > 0) {
+                    SymbolModel *m = [SymbolModel new];
+                    m.file = binPath;
+                    m.size = (NSUInteger)size;
+                    [arr addObject:m];
+                }
+            } else if ([item hasSuffix:@".dylib"]) {
+                unsigned long long size = [self fileSizeAtPath:full];
+                if (size > 0) {
+                    SymbolModel *m = [SymbolModel new];
+                    m.file = full;
+                    m.size = (NSUInteger)size;
+                    [arr addObject:m];
+                }
+            }
+        }
+    }
+
+    NSArray *appItems = [fm contentsOfDirectoryAtPath:appDir error:nil];
+    for (NSString *item in appItems) {
+        if ([item hasSuffix:@".bundle"]) {
+            NSString *bundlePath = [appDir stringByAppendingPathComponent:item];
+            unsigned long long size = [self directorySizeAtPath:bundlePath];
+            if (size > 0) {
+                SymbolModel *m = [SymbolModel new];
+                m.file = bundlePath;
+                m.size = (NSUInteger)size;
+                [arr addObject:m];
+            }
+        }
+    }
+
+    return arr;
+}
+
+- (unsigned long long)fileSizeAtPath:(NSString *)path {
+    NSDictionary *attrs = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:nil];
+    NSNumber *n = attrs[NSFileSize];
+    return n ? [n unsignedLongLongValue] : 0;
+}
+
+- (unsigned long long)directorySizeAtPath:(NSString *)path {
+    NSFileManager *fm = [NSFileManager defaultManager];
+    NSDirectoryEnumerator *enumerator = [fm enumeratorAtPath:path];
+    unsigned long long total = 0;
+    for (NSString *sub in enumerator) {
+        NSString *full = [path stringByAppendingPathComponent:sub];
+        NSDictionary *attrs = [fm attributesOfItemAtPath:full error:nil];
+        NSString *type = attrs[NSFileType];
+        if ([type isEqualToString:NSFileTypeRegular]) {
+            NSNumber *n = attrs[NSFileSize];
+            if (n) total += [n unsignedLongLongValue];
+        }
+    }
+    return total;
 }
 
 - (NSUInteger)analyze:(NSArray<SymbolModel *> *)symbols withSearchKey:(NSString *)searchKey {
@@ -279,15 +382,16 @@
 
     for(SymbolModel *symbol in symbols) {
         if (searchKey.length > 0) {
-            if ([symbol.file containsString:searchKey]) {
+            NSString *name = [[symbol.file componentsSeparatedByString:@"/"] lastObject];
+            if ([self name:name matchesPattern:searchKey]) {
                 [self appendResultWithSymbol:symbol ignore:NO];
                 totalSize += symbol.size;
             }
         } else {
-            if ((ignoreA && [symbol.file hasSuffix:@".a"])
-                || (ignoreO && [symbol.file hasSuffix:@".o"])
-                || (ignoreTbd && [symbol.file hasSuffix:@".tbd"])
-                || (ignoreDylib && [symbol.file hasSuffix:@".dylib"])
+            if ((ignoreA && [symbol.file hasSuffix:@".a"]) 
+                || (ignoreO && [symbol.file hasSuffix:@".o"]) 
+                || (ignoreTbd && [symbol.file hasSuffix:@".tbd"]) 
+                || (ignoreDylib && [symbol.file hasSuffix:@".dylib"]) 
                 || (ignorelinkerSyn && [symbol.file hasPrefix:@" "]) ) {
                 // 系统库如AVFCapture虽然显示是AVFCapture, 但是捕获到的名字是" /System/Library/PrivateFrameworks/AVFCapture.framework/AVFCapture", 所以会命中空格规则
                 [self appendResultWithSymbol:symbol ignore:YES];
@@ -298,6 +402,33 @@
         }
     }
     return totalSize;
+}
+
+- (NSString *)regexFromSearchKey:(NSString *)searchKey {
+    NSString *key = [searchKey stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if (key.length == 0) return nil;
+    NSArray *parts = [key componentsSeparatedByString:@"+"];
+    NSMutableArray *valid = [NSMutableArray array];
+    for (NSString *p in parts) {
+        NSString *t = [p stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        if (t.length > 0) [valid addObject:t];
+    }
+    if (valid.count == 0) return nil;
+    return [NSString stringWithFormat:@"(?:%@)", [valid componentsJoinedByString:@"|"]];
+}
+
+- (BOOL)name:(NSString *)name matchesPattern:(NSString *)searchKey {
+    NSString *pattern = [self regexFromSearchKey:searchKey];
+    if (pattern.length == 0) {
+        return [name rangeOfString:searchKey options:NSCaseInsensitiveSearch].location != NSNotFound;
+    }
+    NSError *error = nil;
+    NSRegularExpression *re = [NSRegularExpression regularExpressionWithPattern:pattern options:NSRegularExpressionCaseInsensitive error:&error];
+    if (error || !re) {
+        return [name rangeOfString:searchKey options:NSCaseInsensitiveSearch].location != NSNotFound;
+    }
+    NSRange r = NSMakeRange(0, name.length);
+    return [re firstMatchInString:name options:0 range:r] != nil;
 }
 
 - (IBAction)ouputFile:(id)sender {
