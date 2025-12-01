@@ -46,6 +46,7 @@ struct LinkMapRootView: View {
     let onAnalyze: () -> Void
     let onOutput: () -> Void
     let onFileDropped: (String) -> Void
+    let onGroupChanged: (Bool) -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
@@ -107,6 +108,9 @@ struct LinkMapRootView: View {
             }
             return true
         }
+        .onChange(of: model.groupParseOn) { newValue in
+            onGroupChanged(newValue)
+        }
     }
 }
 
@@ -115,8 +119,9 @@ struct LinkMapRootView: View {
                                   onChooseFile: @escaping () -> Void,
                                   onAnalyze: @escaping () -> Void,
                                   onOutput: @escaping () -> Void,
-                                  onFileDropped: @escaping (String) -> Void) -> NSView {
-        let root = LinkMapRootView(model: model, onChooseFile: onChooseFile, onAnalyze: onAnalyze, onOutput: onOutput, onFileDropped: onFileDropped)
+                                  onFileDropped: @escaping (String) -> Void,
+                                  onGroupChanged: @escaping (Bool) -> Void) -> NSView {
+        let root = LinkMapRootView(model: model, onChooseFile: onChooseFile, onAnalyze: onAnalyze, onOutput: onOutput, onFileDropped: onFileDropped, onGroupChanged: onGroupChanged)
         let hosting = NSHostingView(rootView: root)
         return hosting
     }

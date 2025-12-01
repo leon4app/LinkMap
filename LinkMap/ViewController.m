@@ -47,6 +47,7 @@
 @property (assign) BOOL ignoreBundleOn;
 @property (assign) BOOL groupParseOn;
 @property (strong) LinkMapModel *uiModel;
+@property (strong) NSArray<SymbolModel *> *cachedSortedSymbols;
 
 @end
 
@@ -120,7 +121,11 @@
                                                     [weakSelf2 analyze:nil];
                                                 }
                                                 onOutput:^(){ [weakSelf2 ouputFile:nil]; }
-                                           onFileDropped:^(NSString *path){ [weakSelf2 didDragFileUrl:path]; }];
+                                           onFileDropped:^(NSString *path){ [weakSelf2 didDragFileUrl:path]; }
+                                        onGroupChanged:^(BOOL on){
+                                            weakSelf2.groupParseOn = on;
+                                            [weakSelf2 renderCachedWithGroup:on];
+                                        }];
     // 清空旧的 XIB 子视图，避免布局重叠
     for (NSView *sub in [self.view.subviews copy]) {
         [sub removeFromSuperview];
@@ -217,6 +222,7 @@
         NSArray <SymbolModel *>*symbols = [symbolMap allValues];
         
         NSArray *sortedSymbols = [strongSelf sortSymbols:symbols];
+        strongSelf.cachedSortedSymbols = sortedSymbols;
         
         BOOL groupOn = self.groupParseOn;
         if (!groupOn && self->_groupButton) {
@@ -244,6 +250,20 @@
             if (strongSelf.onAnalyzeFinished) strongSelf.onAnalyzeFinished(strongSelf.result);
             
         });
+    });
+}
+
+- (void)renderCachedWithGroup:(BOOL)on {
+    if (!self.cachedSortedSymbols) return;
+    if (on) {
+        [self buildCombinationResultWithSymbols:self.cachedSortedSymbols];
+    } else {
+        [self buildResultWithSymbols:self.cachedSortedSymbols];
+    }
+    dispatch_async(dispatch_get_main_queue(), ^{
+        self.contentTextView.string = @"";
+        [[self.contentTextView textStorage] appendAttributedString:self.result];
+        if (self.onAnalyzeFinished) self.onAnalyzeFinished(self.result);
     });
 }
 
@@ -585,13 +605,21 @@
     __block BOOL ignoreTbd;
     __block BOOL ignoreDylib;
     __block BOOL ignorelinkerSyn;
-    dispatch_sync(dispatch_get_main_queue(), ^{
+    if ([NSThread isMainThread]) {
         ignoreA = self.aCheckButton.state == NSControlStateValueOn;
         ignoreO = self.oCheckButton.state == NSControlStateValueOn;
         ignoreTbd = self.tbdCheckButton.state == NSControlStateValueOn;
         ignoreDylib = self.dylibCheckButton.state == NSControlStateValueOn;
         ignorelinkerSyn = self.spacePrefixCheckButton.state == NSControlStateValueOn;
-    });
+    } else {
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            ignoreA = self.aCheckButton.state == NSControlStateValueOn;
+            ignoreO = self.oCheckButton.state == NSControlStateValueOn;
+            ignoreTbd = self.tbdCheckButton.state == NSControlStateValueOn;
+            ignoreDylib = self.dylibCheckButton.state == NSControlStateValueOn;
+            ignorelinkerSyn = self.spacePrefixCheckButton.state == NSControlStateValueOn;
+        });
+    }
 
     for(SymbolModel *symbol in symbols) {
         if (searchKey.length > 0) {
