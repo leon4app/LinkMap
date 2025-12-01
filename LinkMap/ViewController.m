@@ -9,11 +9,13 @@
 #import "ViewController.h"
 #import "SymbolModel.h"
 #import "DragView.h"
+#import "LinkMap-Swift.h"
 @interface ViewController() <DragViewDelegate>
 
 @property (weak) IBOutlet NSTextField *filePathField;//显示选择的文件路径
 @property (weak) IBOutlet NSProgressIndicator *indicator;//指示器
-@property (weak) IBOutlet NSTextField *searchField;
+@property (weak) IBOutlet NSTextField *binaryRuleField;
+@property (weak) IBOutlet NSTextField *assetsRuleField;
 
 @property (weak) IBOutlet NSTextView *contentTextView;
 @property (weak) IBOutlet NSButton *groupButton;
@@ -33,6 +35,18 @@
 @property (weak) IBOutlet NSButton *dylibCheckButton;
 
 @property (weak) IBOutlet NSButton *spacePrefixCheckButton;
+@property (weak) IBOutlet NSButton *syncRuleButton;
+@property (weak) IBOutlet NSButton *ignoreEmbeddedButton;
+@property (weak) IBOutlet NSButton *ignoreBundleButton;
+
+@property (copy) void (^onAnalyzeFinished)(NSAttributedString *result);
+@property (copy) NSString *binaryRule;
+@property (copy) NSString *assetsRule;
+@property (assign) BOOL syncRuleOn;
+@property (assign) BOOL ignoreEmbeddedOn;
+@property (assign) BOOL ignoreBundleOn;
+@property (assign) BOOL groupParseOn;
+@property (strong) LinkMapModel *uiModel;
 
 @end
 
@@ -61,12 +75,69 @@
 
     // 设置悬停文案
     [self.spacePrefixCheckButton setToolTip:@"比如` linker synthesized`或者` objc-stubs-file`\n系统库如AVFCapture虽然显示是AVFCapture, 但是捕获到的名字是` /System/Library/PrivateFrameworks/AVFCapture.framework/AVFCapture`, 所以会命中空格规则"];
+
+    [self.syncRuleButton setToolTip:@"资源规则为空时，让 bundle 采用二进制规则进行匹配"];
+    [self.ignoreEmbeddedButton setToolTip:@"只统计静态链接到可执行文件的体积，忽略 .framework/.dylib"];
+    [self.ignoreBundleButton setToolTip:@"只统计二进制体积，忽略 .bundle 资源体积"];
+
+    NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
+    NSString *br = [ud stringForKey:@"LM_BinaryRule"] ?: @"";
+    NSString *ar = [ud stringForKey:@"LM_AssetsRule"] ?: @"";
+    BOOL syncOn = [ud boolForKey:@"LM_SyncRuleOn"];
+    BOOL ignEmb = [ud boolForKey:@"LM_IgnoreEmbedded"];
+    BOOL ignBundle = [ud boolForKey:@"LM_IgnoreBundle"];
+    if (self.binaryRuleField) self.binaryRuleField.stringValue = br;
+    if (self.assetsRuleField) self.assetsRuleField.stringValue = ar;
+    if (self.syncRuleButton) self.syncRuleButton.state = syncOn ? NSControlStateValueOn : NSControlStateValueOff;
+    if (self.ignoreEmbeddedButton) self.ignoreEmbeddedButton.state = ignEmb ? NSControlStateValueOn : NSControlStateValueOff;
+    if (self.ignoreBundleButton) self.ignoreBundleButton.state = ignBundle ? NSControlStateValueOn : NSControlStateValueOff;
+
+    LinkMapModel *model = [LinkMapModel new];
+    model.binaryRule = br;
+    model.assetsRule = ar;
+    model.syncRuleOn = syncOn;
+    model.ignoreEmbeddedOn = ignEmb;
+    model.ignoreBundleOn = ignBundle;
+    model.groupParseOn = YES;
+
+    self.uiModel = model;
+    __weak typeof(self) weakSelf2 = self;
+    NSView *hosting = [LinkMapHosting hostingViewWithModel:model
+                                             onChooseFile:^(){ [weakSelf2 chooseFile:nil]; }
+                                                onAnalyze:^(){
+                                                    weakSelf2.binaryRule = model.binaryRule ?: @"";
+                                                    weakSelf2.assetsRule = model.assetsRule ?: @"";
+                                                    weakSelf2.syncRuleOn = model.syncRuleOn;
+                                                    weakSelf2.ignoreEmbeddedOn = model.ignoreEmbeddedOn;
+                                                    weakSelf2.ignoreBundleOn = model.ignoreBundleOn;
+                                                    weakSelf2.groupParseOn = model.groupParseOn;
+                                                    [weakSelf2 analyze:nil];
+                                                }
+                                                onOutput:^(){ [weakSelf2 ouputFile:nil]; }
+                                           onFileDropped:^(NSString *path){ [weakSelf2 didDragFileUrl:path]; }];
+    // 清空旧的 XIB 子视图，避免布局重叠
+    for (NSView *sub in [self.view.subviews copy]) {
+        [sub removeFromSuperview];
+    }
+    hosting.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:hosting];
+    [NSLayoutConstraint activateConstraints:@[
+        [hosting.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
+        [hosting.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+        [hosting.topAnchor constraintEqualToAnchor:self.view.topAnchor],
+        [hosting.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor]
+    ]];
+
+    self.onAnalyzeFinished = ^(NSAttributedString *result){
+        weakSelf2.uiModel.result = result;
+    };
 }
 
 - (void)didDragFileUrl:(NSString *)url {
     NSURL *URL = [NSURL fileURLWithPath:url];
     _filePathField.stringValue = URL.path;
     self.linkMapFileURL = URL;
+    if (self.uiModel) self.uiModel.filePath = URL.path;
 }
 
 - (IBAction)chooseFile:(id)sender {
@@ -84,6 +155,7 @@
             __strong typeof(weakSelf) strongSelf = weakSelf;
             strongSelf->_filePathField.stringValue = document.path;
             strongSelf.linkMapFileURL = document;
+            if (strongSelf.uiModel) strongSelf.uiModel.filePath = document.path;
         }
     }];
 }
@@ -93,7 +165,7 @@
         [self showAlertWithText:@"请选择正确的Link Map文件路径"];
         return;
     }
-    self.searchText = _searchField.stringValue;
+    self.searchText = self.binaryRuleField ? self.binaryRuleField.stringValue : @"";
     __weak typeof(self) weakSelf = self;
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         if (weakSelf == nil) return;
@@ -124,14 +196,18 @@
         
         NSArray *sortedSymbols = [strongSelf sortSymbols:symbols];
         
-        __block NSControlStateValue groupButtonState = 0;
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            if (weakSelf == nil) return;
-            __strong typeof(weakSelf) strongSelf = weakSelf;
-            groupButtonState = strongSelf->_groupButton.state;
-        });
+        BOOL groupOn = self.groupParseOn;
+        if (!groupOn && self->_groupButton) {
+            __block NSControlStateValue groupButtonState = 0;
+            dispatch_sync(dispatch_get_main_queue(), ^{
+                if (weakSelf == nil) return;
+                __strong typeof(weakSelf) strongSelf = weakSelf;
+                groupButtonState = strongSelf->_groupButton.state;
+            });
+            groupOn = (groupButtonState == NSControlStateValueOn);
+        }
         
-        if (1 == groupButtonState) {
+        if (groupOn) {
             [strongSelf buildCombinationResultWithSymbols:sortedSymbols];
         } else {
             [strongSelf buildResultWithSymbols:sortedSymbols];
@@ -140,10 +216,10 @@
         dispatch_async(dispatch_get_main_queue(), ^{
             if (weakSelf == nil) return;
             __strong typeof(weakSelf) strongSelf = weakSelf;
-            strongSelf.contentTextView.string = @"";
-            [[strongSelf.contentTextView textStorage] appendAttributedString:strongSelf.result];
+            // SwiftUI 承载结果；旧文本视图不再更新
             strongSelf.indicator.hidden = YES;
             [strongSelf.indicator stopAnimation:self];
+            if (strongSelf.onAnalyzeFinished) strongSelf.onAnalyzeFinished(strongSelf.result);
             
         });
     });
@@ -225,14 +301,55 @@
     NSArray *augmented = symbols;
     NSString *binaryPath = [self appBinaryPathFromContent:self.linkMapContent];
     NSArray *extra = [self extraSymbolsFromAppBinaryPath:binaryPath];
-    if (extra.count > 0) {
-        augmented = [augmented arrayByAddingObjectsFromArray:extra];
+    NSMutableArray *extraFrameworks = [NSMutableArray array];
+    NSMutableArray *extraBundles = [NSMutableArray array];
+    for (SymbolModel *m in extra) {
+        if ([m.file hasSuffix:@".bundle"]) {
+            [extraBundles addObject:m];
+        } else {
+            [extraFrameworks addObject:m];
+        }
     }
 
-    NSUInteger totalSize = [self analyze:augmented withSearchKey:self.searchText];
+    NSString *binaryRule = self.binaryRuleField ? self.binaryRuleField.stringValue : (self.binaryRule ?: @"" );
+    NSString *assetsRule = nil;
+    if (self.assetsRuleField && self.assetsRuleField.stringValue.length > 0) {
+        assetsRule = self.assetsRuleField.stringValue;
+    } else if ((self.syncRuleButton && self.syncRuleButton.state == NSControlStateValueOn) || self.syncRuleOn) {
+        assetsRule = binaryRule;
+    } else {
+        assetsRule = @"";
+    }
+
+    BOOL ignoreEmbedded = self.ignoreEmbeddedButton ? (self.ignoreEmbeddedButton.state == NSControlStateValueOn) : self.ignoreEmbeddedOn;
+    NSArray *binarySymbols = augmented;
+    if (ignoreEmbedded) {
+        binarySymbols = symbols;
+    }
+    if (!ignoreEmbedded && extraFrameworks.count > 0) {
+        binarySymbols = [binarySymbols arrayByAddingObjectsFromArray:extraFrameworks];
+    }
+
+    NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
+    [ud setObject:binaryRule ?: @"" forKey:@"LM_BinaryRule"];
+    [ud setObject:assetsRule ?: @"" forKey:@"LM_AssetsRule"];
+    [ud setBool:((self.syncRuleButton ? (self.syncRuleButton.state == NSControlStateValueOn) : self.syncRuleOn)) forKey:@"LM_SyncRuleOn"];
+    [ud setBool:((self.ignoreEmbeddedButton ? (self.ignoreEmbeddedButton.state == NSControlStateValueOn) : self.ignoreEmbeddedOn)) forKey:@"LM_IgnoreEmbedded"];
+    [ud setBool:((self.ignoreBundleButton ? (self.ignoreBundleButton.state == NSControlStateValueOn) : self.ignoreBundleOn)) forKey:@"LM_IgnoreBundle"];
+    
+    NSUInteger binaryTotal = [self analyze:binarySymbols withSearchKey:binaryRule];
+    BOOL ignoreBundle = self.ignoreBundleButton ? (self.ignoreBundleButton.state == NSControlStateValueOn) : self.ignoreBundleOn;
+    NSUInteger bundleTotal = ignoreBundle ? 0 : [self analyzeAssets:extraBundles withSearchKey:assetsRule];
+    NSUInteger totalSize = binaryTotal + bundleTotal;
 
     NSString *text = [[NSString alloc] initWithFormat:@"\r\n总大小: %.2fMiB(%.2fKiB)\r\n1000进制统计口径: %.2fMB(%.2fKB)\r\n(不包括忽略部分)\r\n",(totalSize/1024.0/1024.0), (totalSize/1024.0), totalSize/1000.0/1000.0, totalSize/1000.0];
     [_result appendAttributedString:[[NSAttributedString alloc] initWithString:text]];
+
+    NSString *binText = [[NSString alloc] initWithFormat:@"二进制总大小: %.2fMiB(%.2fKiB)\r\n1000进制统计口径: %.2fMB(%.2fKB)\r\n",(binaryTotal/1024.0/1024.0), (binaryTotal/1024.0), binaryTotal/1000.0/1000.0, binaryTotal/1000.0];
+    [_result appendAttributedString:[[NSAttributedString alloc] initWithString:binText]];
+
+    NSString *assetText = [[NSString alloc] initWithFormat:@"资源文件: %.2fMiB(%.2fKiB)\r\n",(bundleTotal/1024.0/1024.0), (bundleTotal/1024.0)];
+    [_result appendAttributedString:[[NSAttributedString alloc] initWithString:assetText]];
 }
 
 
@@ -272,14 +389,52 @@
 
     NSString *binaryPath = [self appBinaryPathFromContent:self.linkMapContent];
     NSArray *extra = [self extraSymbolsFromAppBinaryPath:binaryPath];
-    if (extra.count > 0) {
-        sortedSymbols = [self sortSymbols:[sortedSymbols arrayByAddingObjectsFromArray:extra]];
+    NSMutableArray *extraFrameworks = [NSMutableArray array];
+    NSMutableArray *extraBundles = [NSMutableArray array];
+    for (SymbolModel *m in extra) {
+        if ([m.file hasSuffix:@".bundle"]) {
+            [extraBundles addObject:m];
+        } else {
+            [extraFrameworks addObject:m];
+        }
     }
 
-    NSUInteger totalSize = [self analyze:sortedSymbols withSearchKey:self.searchText];
+    NSString *binaryRule = self.binaryRuleField ? self.binaryRuleField.stringValue : (self.binaryRule ?: @"" );
+    NSString *assetsRule = nil;
+    if (self.assetsRuleField && self.assetsRuleField.stringValue.length > 0) {
+        assetsRule = self.assetsRuleField.stringValue;
+    } else if ((self.syncRuleButton && self.syncRuleButton.state == NSControlStateValueOn) || self.syncRuleOn) {
+        assetsRule = binaryRule;
+    } else {
+        assetsRule = @"";
+    }
+
+    BOOL ignoreEmbedded = self.ignoreEmbeddedButton ? (self.ignoreEmbeddedButton.state == NSControlStateValueOn) : self.ignoreEmbeddedOn;
+    NSArray *binarySymbols = sortedSymbols;
+    if (!ignoreEmbedded && extraFrameworks.count > 0) {
+        binarySymbols = [self sortSymbols:[sortedSymbols arrayByAddingObjectsFromArray:extraFrameworks]];
+    }
+
+    NSUserDefaults *ud2 = [NSUserDefaults standardUserDefaults];
+    [ud2 setObject:binaryRule ?: @"" forKey:@"LM_BinaryRule"];
+    [ud2 setObject:assetsRule ?: @"" forKey:@"LM_AssetsRule"];
+    [ud2 setBool:((self.syncRuleButton ? (self.syncRuleButton.state == NSControlStateValueOn) : self.syncRuleOn)) forKey:@"LM_SyncRuleOn"];
+    [ud2 setBool:((self.ignoreEmbeddedButton ? (self.ignoreEmbeddedButton.state == NSControlStateValueOn) : self.ignoreEmbeddedOn)) forKey:@"LM_IgnoreEmbedded"];
+    [ud2 setBool:((self.ignoreBundleButton ? (self.ignoreBundleButton.state == NSControlStateValueOn) : self.ignoreBundleOn)) forKey:@"LM_IgnoreBundle"];
+    
+    NSUInteger binaryTotal = [self analyze:binarySymbols withSearchKey:binaryRule];
+    BOOL ignoreBundle = (self.ignoreBundleButton ? (self.ignoreBundleButton.state == NSControlStateValueOn) : self.ignoreBundleOn);
+    NSUInteger bundleTotal = ignoreBundle ? 0 : [self analyzeAssets:extraBundles withSearchKey:assetsRule];
+    NSUInteger totalSize = binaryTotal + bundleTotal;
 
     NSString *text = [[NSString alloc] initWithFormat:@"\r\n总大小: %.2fMiB(%.2fKiB)\r\n1000进制统计口径: %.2fMB(%.2fKB)\r\n(不包括忽略部分)\r\n",(totalSize/1024.0/1024.0), (totalSize/1024.0), totalSize/1000.0/1000.0, totalSize/1000.0];
     [_result appendAttributedString:[[NSAttributedString alloc] initWithString:text]];
+
+    NSString *binText = [[NSString alloc] initWithFormat:@"二进制总大小: %.2fMiB(%.2fKiB)\r\n1000进制统计口径: %.2fMB(%.2fKB)\r\n",(binaryTotal/1024.0/1024.0), (binaryTotal/1024.0), binaryTotal/1000.0/1000.0, binaryTotal/1000.0];
+    [_result appendAttributedString:[[NSAttributedString alloc] initWithString:binText]];
+
+    NSString *assetText = [[NSString alloc] initWithFormat:@"资源文件: %.2fMiB(%.2fKiB)\r\n",(bundleTotal/1024.0/1024.0), (bundleTotal/1024.0)];
+    [_result appendAttributedString:[[NSAttributedString alloc] initWithString:assetText]];
 }
 
 - (NSString *)appBinaryPathFromContent:(NSString *)content {
@@ -399,6 +554,23 @@
                 [self appendResultWithSymbol:symbol ignore:NO];
                 totalSize += symbol.size;
             }
+        }
+    }
+    return totalSize;
+}
+
+- (NSUInteger)analyzeAssets:(NSArray<SymbolModel *> *)symbols withSearchKey:(NSString *)searchKey {
+    NSUInteger totalSize = 0;
+    for (SymbolModel *symbol in symbols) {
+        NSString *name = [[symbol.file componentsSeparatedByString:@"/"] lastObject];
+        if (searchKey.length > 0) {
+            if ([self name:name matchesPattern:searchKey]) {
+                [self appendResultWithSymbol:symbol ignore:NO];
+                totalSize += symbol.size;
+            }
+        } else {
+            [self appendResultWithSymbol:symbol ignore:NO];
+            totalSize += symbol.size;
         }
     }
     return totalSize;
