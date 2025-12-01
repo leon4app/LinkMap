@@ -14,7 +14,7 @@
 		6E7367F21CB7843200722B99 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6E7367F11CB7843200722B99 /* Assets.xcassets */; };
 		6E7367F51CB7843200722B99 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 6E7367F31CB7843200722B99 /* Main.storyboard */; };
 		6E73680C1CB784F100722B99 /* SymbolModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 6E73680B1CB784F100722B99 /* SymbolModel.m */; };
-        999999991234567800000001 /* LinkMapUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 999999981234567800000001 /* LinkMapUI.swift */; };
+		999999991234567800000001 /* LinkMapUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 999999981234567800000001 /* LinkMapUI.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,7 +31,7 @@
 		6E7367F61CB7843200722B99 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		6E73680A1CB784F100722B99 /* SymbolModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SymbolModel.h; sourceTree = "<group>"; };
 		6E73680B1CB784F100722B99 /* SymbolModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SymbolModel.m; sourceTree = "<group>"; };
-        999999981234567800000001 /* LinkMapUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkMapUI.swift; sourceTree = "<group>"; };
+		999999981234567800000001 /* LinkMapUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkMapUI.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -72,11 +72,11 @@
 				35351B86295ED15500E33F42 /* DragView.h */,
 				35351B87295ED15500E33F42 /* DragView.m */,
 				6E73680B1CB784F100722B99 /* SymbolModel.m */,
-                6E7367F11CB7843200722B99 /* Assets.xcassets */,
-                6E7367F31CB7843200722B99 /* Main.storyboard */,
-                6E7367F61CB7843200722B99 /* Info.plist */,
-                999999981234567800000001 /* LinkMapUI.swift */,
-                6E7367EB1CB7843200722B99 /* Supporting Files */,
+				6E7367F11CB7843200722B99 /* Assets.xcassets */,
+				6E7367F31CB7843200722B99 /* Main.storyboard */,
+				6E7367F61CB7843200722B99 /* Info.plist */,
+				999999981234567800000001 /* LinkMapUI.swift */,
+				6E7367EB1CB7843200722B99 /* Supporting Files */,
 			);
 			path = LinkMap;
 			sourceTree = "<group>";
@@ -161,10 +161,10 @@
 				6E7367F01CB7843200722B99 /* ViewController.m in Sources */,
 				6E7367ED1CB7843200722B99 /* main.m in Sources */,
 				6E7367EA1CB7843200722B99 /* AppDelegate.m in Sources */,
-                6E73680C1CB784F100722B99 /* SymbolModel.m in Sources */,
-                35351B88295ED15500E33F42 /* DragView.m in Sources */,
-                999999991234567800000001 /* LinkMapUI.swift in Sources */,
-            );
+				6E73680C1CB784F100722B99 /* SymbolModel.m in Sources */,
+				35351B88295ED15500E33F42 /* DragView.m in Sources */,
+				999999991234567800000001 /* LinkMapUI.swift in Sources */,
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
@@ -290,42 +290,42 @@
 			};
 			name = Release;
 		};
-        6E7368051CB7843200722B99 /* Debug */ = {
-            isa = XCBuildConfiguration;
-            buildSettings = {
-                ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-                CODE_SIGN_IDENTITY = "-";
-                COMBINE_HIDPI_IMAGES = YES;
-                INFOPLIST_FILE = LinkMap/Info.plist;
-                LD_RUNPATH_SEARCH_PATHS = (
-                    "$(inherited)",
-                    "@executable_path/../Frameworks",
-                );
-                MACOSX_DEPLOYMENT_TARGET = 10.15;
-                SWIFT_VERSION = 5.0;
-                PRODUCT_BUNDLE_IDENTIFIER = com.nd.LinkMap;
-                PRODUCT_NAME = "$(TARGET_NAME)";
-            };
-            name = Debug;
-        };
-        6E7368061CB7843200722B99 /* Release */ = {
-            isa = XCBuildConfiguration;
-            buildSettings = {
-                ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-                CODE_SIGN_IDENTITY = "-";
-                COMBINE_HIDPI_IMAGES = YES;
-                INFOPLIST_FILE = LinkMap/Info.plist;
-                LD_RUNPATH_SEARCH_PATHS = (
-                    "$(inherited)",
-                    "@executable_path/../Frameworks",
-                );
-                MACOSX_DEPLOYMENT_TARGET = 10.15;
-                SWIFT_VERSION = 5.0;
-                PRODUCT_BUNDLE_IDENTIFIER = com.nd.LinkMap;
-                PRODUCT_NAME = "$(TARGET_NAME)";
-            };
-            name = Release;
-        };
+		6E7368051CB7843200722B99 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = LinkMap/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 11;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nd.LinkMap;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		6E7368061CB7843200722B99 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = LinkMap/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 11;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nd.LinkMap;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */

@@ -10,6 +10,9 @@ import AppKit
     @Published public var groupParseOn: Bool = true
     @Published public var result: NSAttributedString?
     @Published public var filePath: String = ""
+    @Published public var filePathHistory: [String] = []
+    @Published public var binaryRuleHistory: [String] = []
+    @Published public var assetsRuleHistory: [String] = []
 }
 
 struct ResultScrollTextViewRepresentable: NSViewRepresentable {
@@ -50,12 +53,32 @@ struct LinkMapRootView: View {
                 Text(model.filePath.isEmpty ? "未选择" : model.filePath)
                     .lineLimit(1)
                     .truncationMode(.middle)
+                Menu("历史") {
+                    ForEach(model.filePathHistory, id: \.self) { p in
+                        Button(p) { onFileDropped(p) }
+                    }
+                }
                 Spacer()
                 Button("选择文件", action: onChooseFile)
             }
             HStack(spacing: 8) {
                 TextField("二进制规则 (正则，支持 +)", text: Binding(get: { model.binaryRule }, set: { model.binaryRule = $0 }))
                     .textFieldStyle(RoundedBorderTextFieldStyle())
+                Menu("历史") {
+                    ForEach(model.binaryRuleHistory, id: \.self) { r in
+                        Button(r) { model.binaryRule = r }
+                    }
+                }
+                Spacer()
+            }
+            HStack(spacing: 8) {
+                TextField("资源规则 (可留空)", text: Binding(get: { model.assetsRule }, set: { model.assetsRule = $0 }))
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                Menu("历史") {
+                    ForEach(model.assetsRuleHistory, id: \.self) { r in
+                        Button(r) { model.assetsRule = r }
+                    }
+                }
                 Spacer()
             }
             HStack(spacing: 12) {

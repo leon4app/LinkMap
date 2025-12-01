@@ -83,6 +83,9 @@
     NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
     NSString *br = [ud stringForKey:@"LM_BinaryRule"] ?: @"";
     NSString *ar = [ud stringForKey:@"LM_AssetsRule"] ?: @"";
+    NSArray *fh = [ud arrayForKey:@"LM_FileHistory"] ?: @[];
+    NSArray *brh = [ud arrayForKey:@"LM_BinaryRuleHistory"] ?: @[];
+    NSArray *arh = [ud arrayForKey:@"LM_AssetsRuleHistory"] ?: @[];
     BOOL syncOn = [ud boolForKey:@"LM_SyncRuleOn"];
     BOOL ignEmb = [ud boolForKey:@"LM_IgnoreEmbedded"];
     BOOL ignBundle = [ud boolForKey:@"LM_IgnoreBundle"];
@@ -99,6 +102,9 @@
     model.ignoreEmbeddedOn = ignEmb;
     model.ignoreBundleOn = ignBundle;
     model.groupParseOn = YES;
+    model.filePathHistory = fh;
+    model.binaryRuleHistory = brh;
+    model.assetsRuleHistory = arh;
 
     self.uiModel = model;
     __weak typeof(self) weakSelf2 = self;
@@ -138,6 +144,14 @@
     _filePathField.stringValue = URL.path;
     self.linkMapFileURL = URL;
     if (self.uiModel) self.uiModel.filePath = URL.path;
+    NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
+    NSArray *old = [ud arrayForKey:@"LM_FileHistory"] ?: @[];
+    NSMutableArray *mut = [NSMutableArray arrayWithArray:old];
+    [mut removeObject:URL.path];
+    [mut insertObject:URL.path atIndex:0];
+    if (mut.count > 10) [mut removeObjectsInRange:NSMakeRange(10, mut.count-10)];
+    [ud setObject:mut forKey:@"LM_FileHistory"];
+    if (self.uiModel) self.uiModel.filePathHistory = mut;
 }
 
 - (IBAction)chooseFile:(id)sender {
@@ -156,6 +170,14 @@
             strongSelf->_filePathField.stringValue = document.path;
             strongSelf.linkMapFileURL = document;
             if (strongSelf.uiModel) strongSelf.uiModel.filePath = document.path;
+            NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
+            NSArray *old = [ud arrayForKey:@"LM_FileHistory"] ?: @[];
+            NSMutableArray *mut = [NSMutableArray arrayWithArray:old];
+            [mut removeObject:document.path];
+            [mut insertObject:document.path atIndex:0];
+            if (mut.count > 10) [mut removeObjectsInRange:NSMakeRange(10, mut.count-10)];
+            [ud setObject:mut forKey:@"LM_FileHistory"];
+            if (strongSelf.uiModel) strongSelf.uiModel.filePathHistory = mut;
         }
     }];
 }
@@ -336,6 +358,24 @@
     [ud setBool:((self.syncRuleButton ? (self.syncRuleButton.state == NSControlStateValueOn) : self.syncRuleOn)) forKey:@"LM_SyncRuleOn"];
     [ud setBool:((self.ignoreEmbeddedButton ? (self.ignoreEmbeddedButton.state == NSControlStateValueOn) : self.ignoreEmbeddedOn)) forKey:@"LM_IgnoreEmbedded"];
     [ud setBool:((self.ignoreBundleButton ? (self.ignoreBundleButton.state == NSControlStateValueOn) : self.ignoreBundleOn)) forKey:@"LM_IgnoreBundle"];
+    NSArray *oldBR = [ud arrayForKey:@"LM_BinaryRuleHistory"] ?: @[];
+    NSMutableArray *mutBR = [NSMutableArray arrayWithArray:oldBR];
+    if (binaryRule.length > 0) {
+        [mutBR removeObject:binaryRule];
+        [mutBR insertObject:binaryRule atIndex:0];
+        if (mutBR.count > 10) [mutBR removeObjectsInRange:NSMakeRange(10, mutBR.count-10)];
+        [ud setObject:mutBR forKey:@"LM_BinaryRuleHistory"];
+        if (self.uiModel) self.uiModel.binaryRuleHistory = mutBR;
+    }
+    NSArray *oldAR = [ud arrayForKey:@"LM_AssetsRuleHistory"] ?: @[];
+    NSMutableArray *mutAR = [NSMutableArray arrayWithArray:oldAR];
+    if (assetsRule.length > 0) {
+        [mutAR removeObject:assetsRule];
+        [mutAR insertObject:assetsRule atIndex:0];
+        if (mutAR.count > 10) [mutAR removeObjectsInRange:NSMakeRange(10, mutAR.count-10)];
+        [ud setObject:mutAR forKey:@"LM_AssetsRuleHistory"];
+        if (self.uiModel) self.uiModel.assetsRuleHistory = mutAR;
+    }
     
     NSUInteger binaryTotal = [self analyze:binarySymbols withSearchKey:binaryRule];
     BOOL ignoreBundle = self.ignoreBundleButton ? (self.ignoreBundleButton.state == NSControlStateValueOn) : self.ignoreBundleOn;
@@ -421,6 +461,24 @@
     [ud2 setBool:((self.syncRuleButton ? (self.syncRuleButton.state == NSControlStateValueOn) : self.syncRuleOn)) forKey:@"LM_SyncRuleOn"];
     [ud2 setBool:((self.ignoreEmbeddedButton ? (self.ignoreEmbeddedButton.state == NSControlStateValueOn) : self.ignoreEmbeddedOn)) forKey:@"LM_IgnoreEmbedded"];
     [ud2 setBool:((self.ignoreBundleButton ? (self.ignoreBundleButton.state == NSControlStateValueOn) : self.ignoreBundleOn)) forKey:@"LM_IgnoreBundle"];
+    NSArray *oldBR2 = [ud2 arrayForKey:@"LM_BinaryRuleHistory"] ?: @[];
+    NSMutableArray *mutBR2 = [NSMutableArray arrayWithArray:oldBR2];
+    if (binaryRule.length > 0) {
+        [mutBR2 removeObject:binaryRule];
+        [mutBR2 insertObject:binaryRule atIndex:0];
+        if (mutBR2.count > 10) [mutBR2 removeObjectsInRange:NSMakeRange(10, mutBR2.count-10)];
+        [ud2 setObject:mutBR2 forKey:@"LM_BinaryRuleHistory"];
+        if (self.uiModel) self.uiModel.binaryRuleHistory = mutBR2;
+    }
+    NSArray *oldAR2 = [ud2 arrayForKey:@"LM_AssetsRuleHistory"] ?: @[];
+    NSMutableArray *mutAR2 = [NSMutableArray arrayWithArray:oldAR2];
+    if (assetsRule.length > 0) {
+        [mutAR2 removeObject:assetsRule];
+        [mutAR2 insertObject:assetsRule atIndex:0];
+        if (mutAR2.count > 10) [mutAR2 removeObjectsInRange:NSMakeRange(10, mutAR2.count-10)];
+        [ud2 setObject:mutAR2 forKey:@"LM_AssetsRuleHistory"];
+        if (self.uiModel) self.uiModel.assetsRuleHistory = mutAR2;
+    }
     
     NSUInteger binaryTotal = [self analyze:binarySymbols withSearchKey:binaryRule];
     BOOL ignoreBundle = (self.ignoreBundleButton ? (self.ignoreBundleButton.state == NSControlStateValueOn) : self.ignoreBundleOn);
