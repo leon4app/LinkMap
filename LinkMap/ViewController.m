@@ -8,20 +8,10 @@
 
 #import "ViewController.h"
 #import "SymbolModel.h"
-#import "DragView.h"
 #import "LinkMap-Swift.h"
-@interface ViewController() <DragViewDelegate>
+@interface ViewController()
 
-@property (weak) IBOutlet NSTextField *filePathField;//显示选择的文件路径
-@property (weak) IBOutlet NSProgressIndicator *indicator;//指示器
-@property (weak) IBOutlet NSTextField *binaryRuleField;
-@property (weak) IBOutlet NSTextField *assetsRuleField;
-
-@property (weak) IBOutlet NSTextView *contentTextView;
-@property (weak) IBOutlet NSButton *groupButton;
-@property (weak) IBOutlet DragView *dragView;
-
-
+// 纯 SwiftUI 驱动，无需 IBOutlets
 @property (strong) NSURL *linkMapFileURL;
 @property (strong) NSString *linkMapContent;
 
@@ -29,15 +19,7 @@
 
 @property (strong) NSMutableAttributedString *result;//分析的结果
 
-@property (weak) IBOutlet NSButton *aCheckButton;
-@property (weak) IBOutlet NSButton *oCheckButton;
-@property (weak) IBOutlet NSButton *tbdCheckButton;
-@property (weak) IBOutlet NSButton *dylibCheckButton;
-
-@property (weak) IBOutlet NSButton *spacePrefixCheckButton;
-@property (weak) IBOutlet NSButton *syncRuleButton;
-@property (weak) IBOutlet NSButton *ignoreEmbeddedButton;
-@property (weak) IBOutlet NSButton *ignoreBundleButton;
+// 过滤选项改由 SwiftUI 模型控制
 
 @property (copy) void (^onAnalyzeFinished)(NSAttributedString *result);
 @property (copy) NSString *binaryRule;
@@ -53,33 +35,13 @@
 
 @implementation ViewController
 
+- (void)loadView {
+    self.view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 900, 640)];
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
-    [self.dragView registerForDraggedTypes:@[NSPasteboardTypeFileURL]];
-    self.dragView.delegate = self;
-
-    self.indicator.hidden = YES;
-    
-    _contentTextView.editable = NO;
-    _contentTextView.selectable = YES;
-    
-    _contentTextView.string = @"使用方式：\n\
-    1.在XCode中开启编译选项Write Link Map File \n\
-    XCode -> Project -> Build Settings -> 把Write Link Map File选项设为yes，并指定好linkMap的存储位置 \n\
-    2.工程编译完成后，在编译目录里找到Link Map文件（txt类型） \n\
-    默认的文件地址：~/Library/Developer/Xcode/DerivedData/XXX-xxxxxxxxxxxxx/Build/Intermediates/XXX.build/Debug-iphoneos/XXX.build/ \n\
-    3.回到本应用，点击“选择文件”，打开Link Map文件  \n\
-    4.点击“开始”，解析Link Map文件 \n\
-    5.点击“输出文件”，得到解析后的Link Map文件 \n\
-    6. * 输入目标文件的关键字(例如：libIM)，然后点击“开始”。实现搜索功能 \n\
-    7. * 勾选“分组解析”，然后点击“开始”。实现对不同库的目标文件进行分组";
-
-    // 设置悬停文案
-    [self.spacePrefixCheckButton setToolTip:@"比如` linker synthesized`或者` objc-stubs-file`\n系统库如AVFCapture虽然显示是AVFCapture, 但是捕获到的名字是` /System/Library/PrivateFrameworks/AVFCapture.framework/AVFCapture`, 所以会命中空格规则"];
-
-    [self.syncRuleButton setToolTip:@"资源规则为空时，让 bundle 采用二进制规则进行匹配"];
-    [self.ignoreEmbeddedButton setToolTip:@"只统计静态链接到可执行文件的体积，忽略 .framework/.dylib"];
-    [self.ignoreBundleButton setToolTip:@"只统计二进制体积，忽略 .bundle 资源体积"];
+    // 说明文案与提示改由 SwiftUI 视图承载
 
     NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
     NSString *br = [ud stringForKey:@"LM_BinaryRule"] ?: @"";
@@ -95,11 +57,7 @@
     BOOL ignTbd = [ud boolForKey:@"LM_IgnoreTbd"];
     BOOL ignDylib = [ud boolForKey:@"LM_IgnoreDylib"];
     BOOL ignSpace = [ud boolForKey:@"LM_IgnoreSpacePrefix"];
-    if (self.binaryRuleField) self.binaryRuleField.stringValue = br;
-    if (self.assetsRuleField) self.assetsRuleField.stringValue = ar;
-    if (self.syncRuleButton) self.syncRuleButton.state = syncOn ? NSControlStateValueOn : NSControlStateValueOff;
-    if (self.ignoreEmbeddedButton) self.ignoreEmbeddedButton.state = ignEmb ? NSControlStateValueOn : NSControlStateValueOff;
-    if (self.ignoreBundleButton) self.ignoreBundleButton.state = ignBundle ? NSControlStateValueOn : NSControlStateValueOff;
+    // 初始值由模型状态驱动，无需同步到 IB 控件
 
     LinkMapModel *model = [LinkMapModel new];
     model.binaryRule = br;
@@ -156,7 +114,6 @@
 
 - (void)didDragFileUrl:(NSString *)url {
     NSURL *URL = [NSURL fileURLWithPath:url];
-    _filePathField.stringValue = URL.path;
     self.linkMapFileURL = URL;
     if (self.uiModel) self.uiModel.filePath = URL.path;
     NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
@@ -182,7 +139,6 @@
             NSURL *document = [[panel URLs] objectAtIndex:0];
             if (weakSelf == nil) return;
             __strong typeof(weakSelf) strongSelf = weakSelf;
-            strongSelf->_filePathField.stringValue = document.path;
             strongSelf.linkMapFileURL = document;
             if (strongSelf.uiModel) strongSelf.uiModel.filePath = document.path;
             NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
@@ -202,7 +158,7 @@
         [self showAlertWithText:@"请选择正确的Link Map文件路径"];
         return;
     }
-    self.searchText = self.binaryRuleField ? self.binaryRuleField.stringValue : @"";
+    self.searchText = self.binaryRule ?: @"";
     __weak typeof(self) weakSelf = self;
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         if (weakSelf == nil) return;
@@ -219,13 +175,14 @@
             return ;
         }
         
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if (weakSelf == nil) return;
-            __strong typeof(weakSelf) strongSelf = weakSelf;
-            strongSelf.indicator.hidden = NO;
-            [strongSelf.indicator startAnimation:self];
-            
-        });
+        BOOL hasPreview = ([content rangeOfString:@"PreviewsJIT" options:NSCaseInsensitiveSearch].location != NSNotFound)
+        || ([content rangeOfString:@"__debug_dylib" options:NSCaseInsensitiveSearch].location != NSNotFound)
+        || ([content rangeOfString:@".debug.dylib" options:NSCaseInsensitiveSearch].location != NSNotFound);
+        if (strongSelf.uiModel) {
+            strongSelf.uiModel.warningText = hasPreview ? @"检测到预览/调试注入，静态链接统计可能偏少；嵌入与资源分项仍可用" : nil;
+        }
+
+        // 进度展示改由 SwiftUI 控制，无需 NSProgressIndicator
         
         NSDictionary *symbolMap = [strongSelf symbolMapFromContent:content];
         
@@ -235,15 +192,6 @@
         strongSelf.cachedSortedSymbols = sortedSymbols;
         
         BOOL groupOn = self.groupParseOn;
-        if (!groupOn && self->_groupButton) {
-            __block NSControlStateValue groupButtonState = 0;
-            dispatch_sync(dispatch_get_main_queue(), ^{
-                if (weakSelf == nil) return;
-                __strong typeof(weakSelf) strongSelf = weakSelf;
-                groupButtonState = strongSelf->_groupButton.state;
-            });
-            groupOn = (groupButtonState == NSControlStateValueOn);
-        }
         
         if (groupOn) {
             [strongSelf buildCombinationResultWithSymbols:sortedSymbols];
@@ -254,11 +202,7 @@
         dispatch_async(dispatch_get_main_queue(), ^{
             if (weakSelf == nil) return;
             __strong typeof(weakSelf) strongSelf = weakSelf;
-            // SwiftUI 承载结果；旧文本视图不再更新
-            strongSelf.indicator.hidden = YES;
-            [strongSelf.indicator stopAnimation:self];
             if (strongSelf.onAnalyzeFinished) strongSelf.onAnalyzeFinished(strongSelf.result);
-            
         });
     });
 }
@@ -271,8 +215,6 @@
         [self buildResultWithSymbols:self.cachedSortedSymbols];
     }
     dispatch_async(dispatch_get_main_queue(), ^{
-        self.contentTextView.string = @"";
-        [[self.contentTextView textStorage] appendAttributedString:self.result];
         if (self.onAnalyzeFinished) self.onAnalyzeFinished(self.result);
     });
 }
@@ -363,17 +305,10 @@
         }
     }
 
-    NSString *binaryRule = self.binaryRuleField ? self.binaryRuleField.stringValue : (self.binaryRule ?: @"" );
-    NSString *assetsRule = nil;
-    if (self.assetsRuleField && self.assetsRuleField.stringValue.length > 0) {
-        assetsRule = self.assetsRuleField.stringValue;
-    } else if ((self.syncRuleButton && self.syncRuleButton.state == NSControlStateValueOn) || self.syncRuleOn) {
-        assetsRule = binaryRule;
-    } else {
-        assetsRule = @"";
-    }
+    NSString *binaryRule = self.binaryRule ?: @"";
+    NSString *assetsRule = (self.assetsRule.length > 0) ? self.assetsRule : (self.syncRuleOn ? binaryRule : @"");
 
-    BOOL ignoreEmbedded = self.ignoreEmbeddedButton ? (self.ignoreEmbeddedButton.state == NSControlStateValueOn) : self.ignoreEmbeddedOn;
+    BOOL ignoreEmbedded = self.ignoreEmbeddedOn;
     NSArray *binarySymbols = augmented;
     if (ignoreEmbedded) {
         binarySymbols = symbols;
@@ -385,19 +320,14 @@
     NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
     [ud setObject:binaryRule ?: @"" forKey:@"LM_BinaryRule"];
     [ud setObject:assetsRule ?: @"" forKey:@"LM_AssetsRule"];
-    [ud setBool:((self.syncRuleButton ? (self.syncRuleButton.state == NSControlStateValueOn) : self.syncRuleOn)) forKey:@"LM_SyncRuleOn"];
-    [ud setBool:((self.ignoreEmbeddedButton ? (self.ignoreEmbeddedButton.state == NSControlStateValueOn) : self.ignoreEmbeddedOn)) forKey:@"LM_IgnoreEmbedded"];
-    [ud setBool:((self.ignoreBundleButton ? (self.ignoreBundleButton.state == NSControlStateValueOn) : self.ignoreBundleOn)) forKey:@"LM_IgnoreBundle"];
-    [ud setBool:(self.uiModel ? self.uiModel.ignoreAOn : (self.aCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreA"];
-    [ud setBool:(self.uiModel ? self.uiModel.ignoreOOn : (self.oCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreO"];
-    [ud setBool:(self.uiModel ? self.uiModel.ignoreTbdOn : (self.tbdCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreTbd"];
-    [ud setBool:(self.uiModel ? self.uiModel.ignoreDylibOn : (self.dylibCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreDylib"];
-    [ud setBool:(self.uiModel ? self.uiModel.ignoreSpacePrefixOn : (self.spacePrefixCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreSpacePrefix"];
-    [ud setBool:(self.uiModel ? self.uiModel.ignoreAOn : (self.aCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreA"];
-    [ud setBool:(self.uiModel ? self.uiModel.ignoreOOn : (self.oCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreO"];
-    [ud setBool:(self.uiModel ? self.uiModel.ignoreTbdOn : (self.tbdCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreTbd"];
-    [ud setBool:(self.uiModel ? self.uiModel.ignoreDylibOn : (self.dylibCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreDylib"];
-    [ud setBool:(self.uiModel ? self.uiModel.ignoreSpacePrefixOn : (self.spacePrefixCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreSpacePrefix"];
+    [ud setBool:(self.syncRuleOn) forKey:@"LM_SyncRuleOn"];
+    [ud setBool:(self.ignoreEmbeddedOn) forKey:@"LM_IgnoreEmbedded"];
+    [ud setBool:(self.ignoreBundleOn) forKey:@"LM_IgnoreBundle"];
+    [ud setBool:self.uiModel.ignoreAOn forKey:@"LM_IgnoreA"];
+    [ud setBool:self.uiModel.ignoreOOn forKey:@"LM_IgnoreO"];
+    [ud setBool:self.uiModel.ignoreTbdOn forKey:@"LM_IgnoreTbd"];
+    [ud setBool:self.uiModel.ignoreDylibOn forKey:@"LM_IgnoreDylib"];
+    [ud setBool:self.uiModel.ignoreSpacePrefixOn forKey:@"LM_IgnoreSpacePrefix"];
     NSArray *oldBR = [ud arrayForKey:@"LM_BinaryRuleHistory"] ?: @[];
     NSMutableArray *mutBR = [NSMutableArray arrayWithArray:oldBR];
     if (binaryRule.length > 0) {
@@ -418,7 +348,7 @@
     }
     
     NSUInteger binaryTotal = [self analyze:binarySymbols withSearchKey:binaryRule];
-    BOOL ignoreBundle = self.ignoreBundleButton ? (self.ignoreBundleButton.state == NSControlStateValueOn) : self.ignoreBundleOn;
+    BOOL ignoreBundle = self.ignoreBundleOn;
     NSUInteger bundleTotal = ignoreBundle ? 0 : [self analyzeAssets:extraBundles withSearchKey:assetsRule];
     NSUInteger totalSize = binaryTotal + bundleTotal;
 
@@ -479,17 +409,10 @@
         }
     }
 
-    NSString *binaryRule = self.binaryRuleField ? self.binaryRuleField.stringValue : (self.binaryRule ?: @"" );
-    NSString *assetsRule = nil;
-    if (self.assetsRuleField && self.assetsRuleField.stringValue.length > 0) {
-        assetsRule = self.assetsRuleField.stringValue;
-    } else if ((self.syncRuleButton && self.syncRuleButton.state == NSControlStateValueOn) || self.syncRuleOn) {
-        assetsRule = binaryRule;
-    } else {
-        assetsRule = @"";
-    }
+    NSString *binaryRule = self.binaryRule ?: @"";
+    NSString *assetsRule = (self.assetsRule.length > 0) ? self.assetsRule : (self.syncRuleOn ? binaryRule : @"");
 
-    BOOL ignoreEmbedded = self.ignoreEmbeddedButton ? (self.ignoreEmbeddedButton.state == NSControlStateValueOn) : self.ignoreEmbeddedOn;
+    BOOL ignoreEmbedded = self.ignoreEmbeddedOn;
     NSArray *binarySymbols = sortedSymbols;
     if (!ignoreEmbedded && extraFrameworks.count > 0) {
         binarySymbols = [self sortSymbols:[sortedSymbols arrayByAddingObjectsFromArray:extraFrameworks]];
@@ -498,14 +421,14 @@
     NSUserDefaults *ud2 = [NSUserDefaults standardUserDefaults];
     [ud2 setObject:binaryRule ?: @"" forKey:@"LM_BinaryRule"];
     [ud2 setObject:assetsRule ?: @"" forKey:@"LM_AssetsRule"];
-    [ud2 setBool:((self.syncRuleButton ? (self.syncRuleButton.state == NSControlStateValueOn) : self.syncRuleOn)) forKey:@"LM_SyncRuleOn"];
-    [ud2 setBool:((self.ignoreEmbeddedButton ? (self.ignoreEmbeddedButton.state == NSControlStateValueOn) : self.ignoreEmbeddedOn)) forKey:@"LM_IgnoreEmbedded"];
-    [ud2 setBool:((self.ignoreBundleButton ? (self.ignoreBundleButton.state == NSControlStateValueOn) : self.ignoreBundleOn)) forKey:@"LM_IgnoreBundle"];
-    [ud2 setBool:(self.uiModel ? self.uiModel.ignoreAOn : (self.aCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreA"];
-    [ud2 setBool:(self.uiModel ? self.uiModel.ignoreOOn : (self.oCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreO"];
-    [ud2 setBool:(self.uiModel ? self.uiModel.ignoreTbdOn : (self.tbdCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreTbd"];
-    [ud2 setBool:(self.uiModel ? self.uiModel.ignoreDylibOn : (self.dylibCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreDylib"];
-    [ud2 setBool:(self.uiModel ? self.uiModel.ignoreSpacePrefixOn : (self.spacePrefixCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreSpacePrefix"];
+    [ud2 setBool:(self.syncRuleOn) forKey:@"LM_SyncRuleOn"];
+    [ud2 setBool:(self.ignoreEmbeddedOn) forKey:@"LM_IgnoreEmbedded"];
+    [ud2 setBool:(self.ignoreBundleOn) forKey:@"LM_IgnoreBundle"];
+    [ud2 setBool:self.uiModel.ignoreAOn forKey:@"LM_IgnoreA"];
+    [ud2 setBool:self.uiModel.ignoreOOn forKey:@"LM_IgnoreO"];
+    [ud2 setBool:self.uiModel.ignoreTbdOn forKey:@"LM_IgnoreTbd"];
+    [ud2 setBool:self.uiModel.ignoreDylibOn forKey:@"LM_IgnoreDylib"];
+    [ud2 setBool:self.uiModel.ignoreSpacePrefixOn forKey:@"LM_IgnoreSpacePrefix"];
     NSArray *oldBR2 = [ud2 arrayForKey:@"LM_BinaryRuleHistory"] ?: @[];
     NSMutableArray *mutBR2 = [NSMutableArray arrayWithArray:oldBR2];
     if (binaryRule.length > 0) {
@@ -526,7 +449,7 @@
     }
     
     NSUInteger binaryTotal = [self analyze:binarySymbols withSearchKey:binaryRule];
-    BOOL ignoreBundle = (self.ignoreBundleButton ? (self.ignoreBundleButton.state == NSControlStateValueOn) : self.ignoreBundleOn);
+    BOOL ignoreBundle = self.ignoreBundleOn;
     NSUInteger bundleTotal = ignoreBundle ? 0 : [self analyzeAssets:extraBundles withSearchKey:assetsRule];
     NSUInteger totalSize = binaryTotal + bundleTotal;
 
@@ -625,11 +548,11 @@
 
 - (NSUInteger)analyze:(NSArray<SymbolModel *> *)symbols withSearchKey:(NSString *)searchKey {
     NSUInteger totalSize = 0;
-    BOOL ignoreA = self.uiModel ? self.uiModel.ignoreAOn : (self.aCheckButton.state == NSControlStateValueOn);
-    BOOL ignoreO = self.uiModel ? self.uiModel.ignoreOOn : (self.oCheckButton.state == NSControlStateValueOn);
-    BOOL ignoreTbd = self.uiModel ? self.uiModel.ignoreTbdOn : (self.tbdCheckButton.state == NSControlStateValueOn);
-    BOOL ignoreDylib = self.uiModel ? self.uiModel.ignoreDylibOn : (self.dylibCheckButton.state == NSControlStateValueOn);
-    BOOL ignorelinkerSyn = self.uiModel ? self.uiModel.ignoreSpacePrefixOn : (self.spacePrefixCheckButton.state == NSControlStateValueOn);
+    BOOL ignoreA = self.uiModel ? self.uiModel.ignoreAOn : NO;
+    BOOL ignoreO = self.uiModel ? self.uiModel.ignoreOOn : NO;
+    BOOL ignoreTbd = self.uiModel ? self.uiModel.ignoreTbdOn : NO;
+    BOOL ignoreDylib = self.uiModel ? self.uiModel.ignoreDylibOn : NO;
+    BOOL ignorelinkerSyn = self.uiModel ? self.uiModel.ignoreSpacePrefixOn : NO;
 
     for(SymbolModel *symbol in symbols) {
         if (searchKey.length > 0) {

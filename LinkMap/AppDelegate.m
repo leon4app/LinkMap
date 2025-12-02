@@ -7,15 +7,29 @@
 //
 
 #import "AppDelegate.h"
+#import "ViewController.h"
 
 @interface AppDelegate () <NSWindowDelegate>
-
+@property (strong) NSWindow *window;
 @end
 
 @implementation AppDelegate
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
-    [NSApplication sharedApplication].windows.firstObject.delegate = self;
+    [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+    NSRect frame = NSMakeRect(0, 0, 900, 640);
+    self.window = [[NSWindow alloc] initWithContentRect:frame
+                                              styleMask:(NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable)
+                                                backing:NSBackingStoreBuffered
+                                                  defer:NO];
+    self.window.title = @"LinkMap";
+    self.window.minSize = NSMakeSize(700, 520);
+    [self.window center];
+    ViewController *vc = [ViewController new];
+    self.window.contentViewController = vc;
+    self.window.delegate = self;
+    [self.window makeKeyAndOrderFront:self];
+    [NSApp activateIgnoringOtherApps:YES];
 }
 
 - (BOOL)windowShouldClose:(NSWindow *)sender {
@@ -26,7 +40,7 @@
 
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)sender hasVisibleWindows:(BOOL)flag {
     if (!flag) {
-        [sender.windows.firstObject makeKeyAndOrderFront:self];
+        [self.window makeKeyAndOrderFront:self];
     }
     return YES;
 }

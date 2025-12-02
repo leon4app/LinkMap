@@ -18,6 +18,8 @@ import AppKit
     @Published public var ignoreTbdOn: Bool = false
     @Published public var ignoreDylibOn: Bool = false
     @Published public var ignoreSpacePrefixOn: Bool = false
+    @Published public var warningText: String? = nil
+    @Published public var rulePresets: [[String: Any]] = []
 }
 
 struct ResultScrollTextViewRepresentable: NSViewRepresentable {
@@ -54,6 +56,13 @@ struct LinkMapRootView: View {
     let onGroupChanged: (Bool) -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            DisclosureGroup("使用说明") {
+                Text("1. 在 Xcode 的 Build Settings 开启 Write Link Map File，并指定保存位置")
+                Text("2. 构建后选择生成的 Link Map 文件 (txt)")
+                Text("3. 输入二进制规则与资源规则，或使用预设")
+                Text("4. 配置过滤开关与分组解析，点击开始")
+                Text("5. 结果支持输出为 RTF 文件")
+            }
             HStack(spacing: 8) {
                 Text("文件路径")
                 Text(model.filePath.isEmpty ? "未选择" : model.filePath)
@@ -66,6 +75,10 @@ struct LinkMapRootView: View {
                 }
                 Spacer()
                 Button("选择文件", action: onChooseFile)
+            }
+            if let warn = model.warningText, !warn.isEmpty {
+                Text(warn)
+                    .foregroundColor(.red)
             }
             HStack(spacing: 8) {
                 TextField("二进制规则 (正则，支持 +)", text: Binding(get: { model.binaryRule }, set: { model.binaryRule = $0 }))
@@ -96,6 +109,42 @@ struct LinkMapRootView: View {
                 Button("开始", action: onAnalyze)
                 Button("输出文件", action: onOutput)
             }
+            HStack(spacing: 8) {
+                Button("保存预设") {
+                    let preset: [String: Any] = [
+                        "binaryRule": model.binaryRule,
+                        "assetsRule": model.assetsRule,
+                        "syncRuleOn": model.syncRuleOn,
+                        "ignoreEmbeddedOn": model.ignoreEmbeddedOn,
+                        "ignoreBundleOn": model.ignoreBundleOn,
+                        "id": UUID().uuidString,
+                        "title": (model.assetsRule.isEmpty ? model.binaryRule : (model.binaryRule + " | " + model.assetsRule))
+                    ]
+                    var arr = model.rulePresets
+                    arr.removeAll { ($0["binaryRule"] as? String == preset["binaryRule"] as? String)
+                                    && ($0["assetsRule"] as? String == preset["assetsRule"] as? String)
+                                    && ($0["syncRuleOn"] as? Bool == preset["syncRuleOn"] as? Bool)
+                                    && ($0["ignoreEmbeddedOn"] as? Bool == preset["ignoreEmbeddedOn"] as? Bool)
+                                    && ($0["ignoreBundleOn"] as? Bool == preset["ignoreBundleOn"] as? Bool) }
+                    arr.insert(preset, at: 0)
+                    if arr.count > 10 { arr.removeSubrange(10..<arr.count) }
+                    UserDefaults.standard.set(arr, forKey: "LM_RulePresets")
+                    model.rulePresets = arr
+                }
+                Menu("加载预设") {
+                    ForEach(Array(model.rulePresets.enumerated()), id: \.offset) { _, item in
+                        let title = (item["title"] as? String) ?? "未命名预设"
+                        Button(title) {
+                            model.binaryRule = (item["binaryRule"] as? String) ?? ""
+                            model.assetsRule = (item["assetsRule"] as? String) ?? ""
+                            model.syncRuleOn = (item["syncRuleOn"] as? Bool) ?? false
+                            model.ignoreEmbeddedOn = (item["ignoreEmbeddedOn"] as? Bool) ?? false
+                            model.ignoreBundleOn = (item["ignoreBundleOn"] as? Bool) ?? false
+                        }
+                    }
+                }
+                Spacer()
+            }
             HStack(spacing: 12) {
                 Text("过滤选项")
                 Toggle(".a", isOn: Binding(get: { model.ignoreAOn }, set: { model.ignoreAOn = $0 }))
@@ -124,6 +173,9 @@ struct LinkMapRootView: View {
         }
         .onChange(of: model.groupParseOn) { newValue in
             onGroupChanged(newValue)
+        }
+        .onAppear {
+            model.rulePresets = (UserDefaults.standard.array(forKey: "LM_RulePresets") as? [[String: Any]]) ?? []
         }
     }
 }
