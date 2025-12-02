@@ -723,17 +723,17 @@
                                 </connections>
                             </button>
                             <scrollView horizontalLineScroll="10" horizontalPageScroll="10" verticalLineScroll="10" verticalPageScroll="10" hasHorizontalScroller="NO" usesPredominantAxisScrolling="NO" translatesAutoresizingMaskIntoConstraints="NO" id="jFt-sR-nuD" customClass="DragView">
-                                <rect key="frame" x="25" y="20" width="601" height="345"/>
+                                <rect key="frame" x="25" y="20" width="601" height="279"/>
                                 <clipView key="contentView" drawsBackground="NO" id="UXc-sD-UwH">
-                                    <rect key="frame" x="1" y="1" width="599" height="343"/>
+                                    <rect key="frame" x="1" y="1" width="599" height="277"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                     <subviews>
                                         <textView importsGraphics="NO" verticallyResizable="YES" usesFontPanel="YES" findStyle="panel" continuousSpellChecking="YES" allowsUndo="YES" usesRuler="YES" allowsNonContiguousLayout="YES" quoteSubstitution="YES" dashSubstitution="YES" spellingCorrection="YES" smartInsertDelete="YES" id="zLH-fS-KrC">
-                                            <rect key="frame" x="0.0" y="0.0" width="599" height="343"/>
+                                            <rect key="frame" x="0.0" y="0.0" width="599" height="277"/>
                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                             <color key="textColor" name="textColor" catalog="System" colorSpace="catalog"/>
                                             <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
-                                            <size key="minSize" width="599" height="343"/>
+                                            <size key="minSize" width="599" height="277"/>
                                             <size key="maxSize" width="601" height="10000000"/>
                                             <color key="insertionPointColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                         </textView>
@@ -744,13 +744,12 @@
                                     <autoresizingMask key="autoresizingMask"/>
                                 </scroller>
                                 <scroller key="verticalScroller" wantsLayer="YES" verticalHuggingPriority="750" doubleValue="1" horizontal="NO" id="ONL-ND-TtJ">
-                                    <rect key="frame" x="583" y="1" width="17" height="343"/>
+                                    <rect key="frame" x="583" y="1" width="17" height="277"/>
                                     <autoresizingMask key="autoresizingMask"/>
                                 </scroller>
                             </scrollView>
-                            
-                            <textField focusRingType="none" verticalHuggingPriority="750" ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="bRu-Le-FLD" userLabel="Binary Rule Field">
-                                <rect key="frame" x="20" y="375" width="323" height="24"/>
+                            <textField focusRingType="none" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="bRu-Le-FLD" userLabel="Binary Rule Field">
+                                <rect key="frame" x="20" y="407" width="318" height="24"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" placeholderString="二进制规则 (正则，支持 +)" drawsBackground="YES" id="p0Z-Yf-Qq1">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -758,7 +757,7 @@
                                 </textFieldCell>
                             </textField>
                             <textField focusRingType="none" verticalHuggingPriority="750" ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="aRu-Le-FLD" userLabel="Assets Rule Field">
-                                <rect key="frame" x="20" y="343" width="323" height="24"/>
+                                <rect key="frame" x="20" y="375" width="323" height="24"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" placeholderString="资源规则 (正则，支持 +)" drawsBackground="YES" id="u1C-Bf-ER7">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -766,21 +765,21 @@
                                 </textFieldCell>
                             </textField>
                             <button verticalHuggingPriority="750" ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="SyN-cR-ULE" userLabel="Sync Rule Button">
-                                <rect key="frame" x="350" y="347" width="80" height="16"/>
+                                <rect key="frame" x="350" y="379" width="80" height="16"/>
                                 <buttonCell key="cell" type="check" title="资源继承二进制规则" bezelStyle="regularSquare" imagePosition="left" inset="2" id="ZnE-AE-3fG">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
                                 </buttonCell>
                             </button>
                             <button verticalHuggingPriority="750" ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="IgN-Em-BTN" userLabel="Ignore Embedded Button">
-                                <rect key="frame" x="440" y="347" width="110" height="16"/>
+                                <rect key="frame" x="440" y="379" width="110" height="16"/>
                                 <buttonCell key="cell" type="check" title="不统计嵌入framework/dylib" bezelStyle="regularSquare" imagePosition="left" inset="2" id="fmn-w1-2Ls">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
                                 </buttonCell>
                             </button>
                             <button verticalHuggingPriority="750" ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="IgN-Bu-BTN" userLabel="Ignore Bundle Button">
-                                <rect key="frame" x="560" y="347" width="70" height="16"/>
+                                <rect key="frame" x="560" y="371" width="70" height="32"/>
                                 <buttonCell key="cell" type="check" title="不统计bundle资源" bezelStyle="regularSquare" imagePosition="left" inset="2" id="g1n-Ct-9kP">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -794,7 +793,7 @@
                                 </buttonCell>
                             </button>
                             <stackView distribution="fill" orientation="horizontal" alignment="top" horizontalStackHuggingPriority="249.99998474121094" verticalStackHuggingPriority="249.99998474121094" detachesHiddenViews="YES" translatesAutoresizingMaskIntoConstraints="NO" id="h1l-E6-Vg7">
-                                <rect key="frame" x="352" y="367" width="273" height="32"/>
+                                <rect key="frame" x="352" y="311" width="273" height="32"/>
                                 <subviews>
                                     <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="QNr-et-sIe">
                                         <rect key="frame" x="0.0" y="16" width="33" height="16"/>
@@ -848,7 +847,7 @@
                                 </customSpacing>
                             </stackView>
                             <textField focusRingType="none" horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="7Wp-Qt-xGu" userLabel="过滤选项">
-                                <rect key="frame" x="290" y="383" width="56" height="16"/>
+                                <rect key="frame" x="290" y="351" width="56" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="clipping" title="过滤选项" id="jZF-Fh-wJN">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -882,7 +881,6 @@
                             <constraint firstItem="IgN-Bu-BTN" firstAttribute="leading" secondItem="IgN-Em-BTN" secondAttribute="trailing" constant="8" id="ignbundle-leading"/>
                             <constraint firstItem="IgN-Em-BTN" firstAttribute="centerY" secondItem="aRu-Le-FLD" secondAttribute="centerY" id="ignemb-centerY"/>
                             <constraint firstItem="IgN-Em-BTN" firstAttribute="leading" secondItem="SyN-cR-ULE" secondAttribute="trailing" constant="8" id="ignemb-leading"/>
-                            
                             <constraint firstItem="VoU-Xv-rpc" firstAttribute="centerY" secondItem="I8M-DG-WSk" secondAttribute="centerY" id="l3Q-rx-AFo"/>
                             <constraint firstAttribute="trailing" secondItem="jFt-sR-nuD" secondAttribute="trailing" constant="14" id="owp-os-5Oh"/>
                             <constraint firstItem="X8W-zP-y0k" firstAttribute="leading" secondItem="gvW-Eu-zLm" secondAttribute="leading" constant="20" id="rnA-6r-2qW"/>
@@ -905,7 +903,6 @@
                         <outlet property="ignoreEmbeddedButton" destination="IgN-Em-BTN" id="ignemb-conn"/>
                         <outlet property="indicator" destination="VoU-Xv-rpc" id="2Qo-ph-PHj"/>
                         <outlet property="oCheckButton" destination="lQE-IG-DNI" id="kXb-4q-VmI"/>
-                        
                         <outlet property="spacePrefixCheckButton" destination="Dt6-c9-FRe" id="698-j2-jKs"/>
                         <outlet property="syncRuleButton" destination="SyN-cR-ULE" id="sync-conn"/>
                         <outlet property="tbdCheckButton" destination="k2V-nl-zH1" id="jOy-ro-gQn"/>

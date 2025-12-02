@@ -13,6 +13,11 @@ import AppKit
     @Published public var filePathHistory: [String] = []
     @Published public var binaryRuleHistory: [String] = []
     @Published public var assetsRuleHistory: [String] = []
+    @Published public var ignoreAOn: Bool = false
+    @Published public var ignoreOOn: Bool = false
+    @Published public var ignoreTbdOn: Bool = false
+    @Published public var ignoreDylibOn: Bool = false
+    @Published public var ignoreSpacePrefixOn: Bool = false
 }
 
 struct ResultScrollTextViewRepresentable: NSViewRepresentable {
@@ -90,6 +95,15 @@ struct LinkMapRootView: View {
                 Toggle("分组解析", isOn: Binding(get: { model.groupParseOn }, set: { model.groupParseOn = $0 }))
                 Button("开始", action: onAnalyze)
                 Button("输出文件", action: onOutput)
+            }
+            HStack(spacing: 12) {
+                Text("过滤选项")
+                Toggle(".a", isOn: Binding(get: { model.ignoreAOn }, set: { model.ignoreAOn = $0 }))
+                Toggle(".o", isOn: Binding(get: { model.ignoreOOn }, set: { model.ignoreOOn = $0 }))
+                Toggle(".tbd", isOn: Binding(get: { model.ignoreTbdOn }, set: { model.ignoreTbdOn = $0 }))
+                Toggle(".dylib", isOn: Binding(get: { model.ignoreDylibOn }, set: { model.ignoreDylibOn = $0 }))
+                Toggle("空格前缀", isOn: Binding(get: { model.ignoreSpacePrefixOn }, set: { model.ignoreSpacePrefixOn = $0 }))
+                Spacer()
             }
             Divider()
             ResultScrollTextViewRepresentable(attributedText: model.result)

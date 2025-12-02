@@ -90,6 +90,11 @@
     BOOL syncOn = [ud boolForKey:@"LM_SyncRuleOn"];
     BOOL ignEmb = [ud boolForKey:@"LM_IgnoreEmbedded"];
     BOOL ignBundle = [ud boolForKey:@"LM_IgnoreBundle"];
+    BOOL ignA = [ud boolForKey:@"LM_IgnoreA"];
+    BOOL ignO = [ud boolForKey:@"LM_IgnoreO"];
+    BOOL ignTbd = [ud boolForKey:@"LM_IgnoreTbd"];
+    BOOL ignDylib = [ud boolForKey:@"LM_IgnoreDylib"];
+    BOOL ignSpace = [ud boolForKey:@"LM_IgnoreSpacePrefix"];
     if (self.binaryRuleField) self.binaryRuleField.stringValue = br;
     if (self.assetsRuleField) self.assetsRuleField.stringValue = ar;
     if (self.syncRuleButton) self.syncRuleButton.state = syncOn ? NSControlStateValueOn : NSControlStateValueOff;
@@ -106,6 +111,11 @@
     model.filePathHistory = fh;
     model.binaryRuleHistory = brh;
     model.assetsRuleHistory = arh;
+    model.ignoreAOn = ignA;
+    model.ignoreOOn = ignO;
+    model.ignoreTbdOn = ignTbd;
+    model.ignoreDylibOn = ignDylib;
+    model.ignoreSpacePrefixOn = ignSpace;
 
     self.uiModel = model;
     __weak typeof(self) weakSelf2 = self;
@@ -378,6 +388,16 @@
     [ud setBool:((self.syncRuleButton ? (self.syncRuleButton.state == NSControlStateValueOn) : self.syncRuleOn)) forKey:@"LM_SyncRuleOn"];
     [ud setBool:((self.ignoreEmbeddedButton ? (self.ignoreEmbeddedButton.state == NSControlStateValueOn) : self.ignoreEmbeddedOn)) forKey:@"LM_IgnoreEmbedded"];
     [ud setBool:((self.ignoreBundleButton ? (self.ignoreBundleButton.state == NSControlStateValueOn) : self.ignoreBundleOn)) forKey:@"LM_IgnoreBundle"];
+    [ud setBool:(self.uiModel ? self.uiModel.ignoreAOn : (self.aCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreA"];
+    [ud setBool:(self.uiModel ? self.uiModel.ignoreOOn : (self.oCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreO"];
+    [ud setBool:(self.uiModel ? self.uiModel.ignoreTbdOn : (self.tbdCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreTbd"];
+    [ud setBool:(self.uiModel ? self.uiModel.ignoreDylibOn : (self.dylibCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreDylib"];
+    [ud setBool:(self.uiModel ? self.uiModel.ignoreSpacePrefixOn : (self.spacePrefixCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreSpacePrefix"];
+    [ud setBool:(self.uiModel ? self.uiModel.ignoreAOn : (self.aCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreA"];
+    [ud setBool:(self.uiModel ? self.uiModel.ignoreOOn : (self.oCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreO"];
+    [ud setBool:(self.uiModel ? self.uiModel.ignoreTbdOn : (self.tbdCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreTbd"];
+    [ud setBool:(self.uiModel ? self.uiModel.ignoreDylibOn : (self.dylibCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreDylib"];
+    [ud setBool:(self.uiModel ? self.uiModel.ignoreSpacePrefixOn : (self.spacePrefixCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreSpacePrefix"];
     NSArray *oldBR = [ud arrayForKey:@"LM_BinaryRuleHistory"] ?: @[];
     NSMutableArray *mutBR = [NSMutableArray arrayWithArray:oldBR];
     if (binaryRule.length > 0) {
@@ -481,6 +501,11 @@
     [ud2 setBool:((self.syncRuleButton ? (self.syncRuleButton.state == NSControlStateValueOn) : self.syncRuleOn)) forKey:@"LM_SyncRuleOn"];
     [ud2 setBool:((self.ignoreEmbeddedButton ? (self.ignoreEmbeddedButton.state == NSControlStateValueOn) : self.ignoreEmbeddedOn)) forKey:@"LM_IgnoreEmbedded"];
     [ud2 setBool:((self.ignoreBundleButton ? (self.ignoreBundleButton.state == NSControlStateValueOn) : self.ignoreBundleOn)) forKey:@"LM_IgnoreBundle"];
+    [ud2 setBool:(self.uiModel ? self.uiModel.ignoreAOn : (self.aCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreA"];
+    [ud2 setBool:(self.uiModel ? self.uiModel.ignoreOOn : (self.oCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreO"];
+    [ud2 setBool:(self.uiModel ? self.uiModel.ignoreTbdOn : (self.tbdCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreTbd"];
+    [ud2 setBool:(self.uiModel ? self.uiModel.ignoreDylibOn : (self.dylibCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreDylib"];
+    [ud2 setBool:(self.uiModel ? self.uiModel.ignoreSpacePrefixOn : (self.spacePrefixCheckButton.state == NSControlStateValueOn)) forKey:@"LM_IgnoreSpacePrefix"];
     NSArray *oldBR2 = [ud2 arrayForKey:@"LM_BinaryRuleHistory"] ?: @[];
     NSMutableArray *mutBR2 = [NSMutableArray arrayWithArray:oldBR2];
     if (binaryRule.length > 0) {
@@ -600,26 +625,11 @@
 
 - (NSUInteger)analyze:(NSArray<SymbolModel *> *)symbols withSearchKey:(NSString *)searchKey {
     NSUInteger totalSize = 0;
-    __block BOOL ignoreA;
-    __block BOOL ignoreO;
-    __block BOOL ignoreTbd;
-    __block BOOL ignoreDylib;
-    __block BOOL ignorelinkerSyn;
-    if ([NSThread isMainThread]) {
-        ignoreA = self.aCheckButton.state == NSControlStateValueOn;
-        ignoreO = self.oCheckButton.state == NSControlStateValueOn;
-        ignoreTbd = self.tbdCheckButton.state == NSControlStateValueOn;
-        ignoreDylib = self.dylibCheckButton.state == NSControlStateValueOn;
-        ignorelinkerSyn = self.spacePrefixCheckButton.state == NSControlStateValueOn;
-    } else {
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            ignoreA = self.aCheckButton.state == NSControlStateValueOn;
-            ignoreO = self.oCheckButton.state == NSControlStateValueOn;
-            ignoreTbd = self.tbdCheckButton.state == NSControlStateValueOn;
-            ignoreDylib = self.dylibCheckButton.state == NSControlStateValueOn;
-            ignorelinkerSyn = self.spacePrefixCheckButton.state == NSControlStateValueOn;
-        });
-    }
+    BOOL ignoreA = self.uiModel ? self.uiModel.ignoreAOn : (self.aCheckButton.state == NSControlStateValueOn);
+    BOOL ignoreO = self.uiModel ? self.uiModel.ignoreOOn : (self.oCheckButton.state == NSControlStateValueOn);
+    BOOL ignoreTbd = self.uiModel ? self.uiModel.ignoreTbdOn : (self.tbdCheckButton.state == NSControlStateValueOn);
+    BOOL ignoreDylib = self.uiModel ? self.uiModel.ignoreDylibOn : (self.dylibCheckButton.state == NSControlStateValueOn);
+    BOOL ignorelinkerSyn = self.uiModel ? self.uiModel.ignoreSpacePrefixOn : (self.spacePrefixCheckButton.state == NSControlStateValueOn);
 
     for(SymbolModel *symbol in symbols) {
         if (searchKey.length > 0) {
