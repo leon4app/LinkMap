@@ -1,7 +1,9 @@
+// SwiftUI 视图与模型定义；模型属性使用 @Published 以驱动 UI 更新
 import SwiftUI
 import AppKit
 
-@objcMembers public class LinkMapModel: NSObject, ObservableObject {
+/// 界面状态模型：规则、开关、历史与结果
+public class LinkMapModel: ObservableObject {
     @Published public var binaryRule: String = ""
     @Published public var assetsRule: String = ""
     @Published public var syncRuleOn: Bool = false
@@ -22,6 +24,7 @@ import AppKit
     @Published public var rulePresets: [[String: Any]] = []
 }
 
+/// 使用 AppKit 的 NSTextView 承载富文本结果并提供滚动
 struct ResultScrollTextViewRepresentable: NSViewRepresentable {
     var attributedText: NSAttributedString?
     func makeNSView(context: Context) -> NSScrollView {
@@ -47,6 +50,7 @@ struct ResultScrollTextViewRepresentable: NSViewRepresentable {
     }
 }
 
+/// 主界面：文件选择、规则输入、预设、开关、结果展示
 struct LinkMapRootView: View {
     @ObservedObject var model: LinkMapModel
     let onChooseFile: () -> Void
@@ -154,6 +158,11 @@ struct LinkMapRootView: View {
                 Toggle("空格前缀", isOn: Binding(get: { model.ignoreSpacePrefixOn }, set: { model.ignoreSpacePrefixOn = $0 }))
                 Spacer()
             }
+            if !model.binaryRule.isEmpty {
+                Text("提示：已填写二进制规则，类型过滤仅在正则为空时生效")
+                    .foregroundColor(.orange)
+                    .font(.caption)
+            }
             Divider()
             ResultScrollTextViewRepresentable(attributedText: model.result)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -180,15 +189,4 @@ struct LinkMapRootView: View {
     }
 }
 
-@objc public class LinkMapHosting: NSObject {
-    @objc public static func hostingView(model: LinkMapModel,
-                                  onChooseFile: @escaping () -> Void,
-                                  onAnalyze: @escaping () -> Void,
-                                  onOutput: @escaping () -> Void,
-                                  onFileDropped: @escaping (String) -> Void,
-                                  onGroupChanged: @escaping (Bool) -> Void) -> NSView {
-        let root = LinkMapRootView(model: model, onChooseFile: onChooseFile, onAnalyze: onAnalyze, onOutput: onOutput, onFileDropped: onFileDropped, onGroupChanged: onGroupChanged)
-        let hosting = NSHostingView(rootView: root)
-        return hosting
-    }
-}
+// 纯 SwiftUI 应用，无需 ObjC Hosting 桥接
