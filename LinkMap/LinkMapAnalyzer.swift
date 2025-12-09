@@ -141,6 +141,7 @@ final class LinkMapAnalyzer {
     }
 
     // MARK: - Parsing & Result
+
     private var currentResult = NSMutableAttributedString(string: "")
 
     /// 解析 Link Map：遍历 # Object files 与 # Symbols 段，累计每个目标文件的符号大小
@@ -157,14 +158,14 @@ final class LinkMapAnalyzer {
                 else if line.hasPrefix("# Symbols:") { reachSymbols = true }
                 else if line.hasPrefix("# Dead Stripped Symbols:") { break }
             } else {
-                if reachFiles && !reachSections && !reachSymbols {
+                if reachFiles, !reachSections, !reachSymbols {
                     if let r = line.range(of: "]") {
                         let symbol = SymbolModel()
                         symbol.file = String(line[line.index(after: r.lowerBound)...])
                         let key = String(line[..<line.index(after: r.lowerBound)])
                         map[key] = symbol
                     }
-                } else if reachFiles && reachSections && reachSymbols {
+                } else if reachFiles, reachSections, reachSymbols {
                     let parts = line.components(separatedBy: "\t")
                     if parts.count == 3 {
                         let fileKeyAndName = parts[2]
@@ -187,7 +188,7 @@ final class LinkMapAnalyzer {
     }
 
     private func sortSymbols(_ symbols: [SymbolModel]) -> [SymbolModel] {
-        symbols.sorted { (a, b) in if a.size == b.size { return false } else { return a.size > b.size } }
+        symbols.sorted { a, b in if a.size == b.size { return false } else { return a.size > b.size } }
     }
 
     /// 构建普通模式结果：列表行 + 分项统计（二进制/资源）+ 合计
@@ -205,7 +206,7 @@ final class LinkMapAnalyzer {
         let assetsRule = (model.assetsRule.isEmpty && model.syncRuleOn) ? binaryRule : model.assetsRule
         let ignoreEmbedded = model.ignoreEmbeddedOn
         var binarySymbols: [SymbolModel] = ignoreEmbedded ? symbols : augmented
-        if !ignoreEmbedded && !extraFrameworks.isEmpty { binarySymbols.append(contentsOf: extraFrameworks) }
+        if !ignoreEmbedded, !extraFrameworks.isEmpty { binarySymbols.append(contentsOf: extraFrameworks) }
         persistRules(binaryRule: binaryRule, assetsRule: assetsRule)
         let binaryTotal = analyze(binarySymbols, searchKey: binaryRule)
         let ignoreBundle = model.ignoreBundleOn
@@ -245,7 +246,7 @@ final class LinkMapAnalyzer {
         let binaryRule = model.binaryRule
         let assetsRule = (model.assetsRule.isEmpty && model.syncRuleOn) ? binaryRule : model.assetsRule
         let ignoreEmbedded = model.ignoreEmbeddedOn
-        if !ignoreEmbedded && !extraFrameworks.isEmpty {
+        if !ignoreEmbedded, !extraFrameworks.isEmpty {
             sortedSymbols = sortSymbols(sortedSymbols + extraFrameworks)
         }
         persistRules(binaryRule: binaryRule, assetsRule: assetsRule)
@@ -383,10 +384,10 @@ final class LinkMapAnalyzer {
     /// 追加一行结果文本；忽略项使用浅灰色以做区分
     private func append(_ model: SymbolModel, ignore: Bool) {
         let sizeText: String
-        if Double(model.size) / 1024.0 / 1024.0 > 1.0 {
-            sizeText = String(format: "%.2fMiB", Double(model.size) / 1024.0 / 1024.0)
+        if Double(model.size)/1024.0/1024.0 > 1.0 {
+            sizeText = String(format: "%.2fMiB", Double(model.size)/1024.0/1024.0)
         } else {
-            sizeText = String(format: "%.2fKiB", Double(model.size) / 1024.0)
+            sizeText = String(format: "%.2fKiB", Double(model.size)/1024.0)
         }
         let text = "\(sizeText)\t\t\(URL(fileURLWithPath: model.file).lastPathComponent)\r\n"
         if ignore {
@@ -452,7 +453,7 @@ final class LinkMapAnalyzer {
                              Double(binaryTotal)/1024.0/1024.0, Double(binaryTotal)/1024.0, Double(binaryTotal)/1000.0/1000.0, Double(binaryTotal)/1000.0)
         currentResult.append(NSAttributedString(string: binText))
         let assetText = String(format: "资源文件: %.2fMiB(%.2fKiB)\r\n",
-                              Double(bundleTotal)/1024.0/1024.0, Double(bundleTotal)/1024.0)
+                               Double(bundleTotal)/1024.0/1024.0, Double(bundleTotal)/1024.0)
         currentResult.append(NSAttributedString(string: assetText))
     }
 

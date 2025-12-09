@@ -13,6 +13,7 @@ struct LinkMapApp: App {
         analyzer = LinkMapAnalyzer(model: m)
         analyzer.loadPersistedState()
     }
+
     var body: some Scene {
         WindowGroup {
             // 主界面：模型状态驱动，操作通过闭包委托给解析器
